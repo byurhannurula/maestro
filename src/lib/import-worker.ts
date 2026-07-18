@@ -8,7 +8,7 @@ import {
   getScanStatus,
   search3Songs,
 } from "./subsonic";
-import type { ImportBatch, ImportJob } from "./import-store";
+import { save, type ImportBatch, type ImportJob } from "./import-store";
 import type { Song } from "./types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -71,6 +71,8 @@ async function waitForScan(timeoutMs: number): Promise<void> {
  * holds the same object references, so the polling UI sees live updates).
  */
 export async function runBatch(batch: ImportBatch): Promise<void> {
+  // Persist live progress to disk every couple of seconds while running.
+  const saver = setInterval(save, 2000);
   try {
     // Resolve the target playlist (create by name if needed).
     let playlistId = batch.playlistId;
@@ -164,5 +166,7 @@ export async function runBatch(batch: ImportBatch): Promise<void> {
     batch.error = e instanceof Error ? e.message : String(e);
   } finally {
     batch.done = true;
+    clearInterval(saver);
+    save();
   }
 }

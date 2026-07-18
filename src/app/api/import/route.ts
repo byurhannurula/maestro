@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { parseImportList } from "@/lib/parse-import";
-import { createBatch } from "@/lib/import-store";
+import { createBatch, listBatches } from "@/lib/import-store";
 import { runBatch } from "@/lib/import-worker";
 import { isNavidromeConfigured } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
+
+export async function GET() {
+  return NextResponse.json({ batches: listBatches() });
+}
 
 export async function POST(req: NextRequest) {
   if (!isNavidromeConfigured) {

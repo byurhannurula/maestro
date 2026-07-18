@@ -1,6 +1,6 @@
 import { getLibraryPlaylists } from "@/lib/library";
 import { PageHeader } from "@/components/page-header";
-import { ImportForm } from "@/components/import-form";
+import { ImportView } from "@/components/import-view";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export default async function ImportPage() {
         title="Import"
         subtitle="Paste or drop a list of songs — 'Artist - Title' per line. They download via deemix, then land in Navidrome and your chosen playlist."
       />
-      <ImportForm playlists={playlists} />
+      <ImportView playlists={playlists} />
     </div>
   );
 }
