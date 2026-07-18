@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getLibraryPlaylists } from "@/lib/library";
 import { createPlaylist, deletePlaylist } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
+import { bust } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });
 
   await createPlaylist(name);
+  bust("playlists");
   return NextResponse.json(await getLibraryPlaylists());
 }
 
@@ -29,5 +31,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   await deletePlaylist(id);
+  bust("playlists");
   return NextResponse.json(await getLibraryPlaylists());
 }

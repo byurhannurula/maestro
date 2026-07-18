@@ -24,6 +24,11 @@ const schema = z.object({
   // --- App state ---
   DATABASE_PATH: z.string().default("/data/maestro.db"),
 
+  // --- Caching ---
+  // How long Navidrome reads are cached (seconds). Busted immediately on any
+  // in-app mutation (star / delete / playlist edit / import). Default 24h.
+  CACHE_TTL_SECONDS: z.coerce.number().int().nonnegative().default(86_400),
+
   // --- Import pipeline tuning ---
   IMPORT_DELAY_MS: z.coerce.number().int().nonnegative().default(1500),
   IMPORT_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),

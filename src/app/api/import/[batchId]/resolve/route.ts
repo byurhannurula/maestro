@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getBatch, save } from "@/lib/import-store";
 import { addSongsToPlaylist } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
+import { bust } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function POST(
       job.status = "added";
       job.error = undefined;
       save();
+      bust("playlists");
       return NextResponse.json(batch);
     } catch (e) {
       return NextResponse.json(

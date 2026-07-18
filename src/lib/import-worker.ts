@@ -9,6 +9,7 @@ import {
   search3Songs,
 } from "./subsonic";
 import { save, type ImportBatch, type ImportJob } from "./import-store";
+import { bust } from "./cache";
 import type { Song } from "./types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -168,5 +169,7 @@ export async function runBatch(batch: ImportBatch): Promise<void> {
     batch.done = true;
     clearInterval(saver);
     save();
+    // New tracks + playlist membership changed — drop the caches.
+    bust("songs", "playlists");
   }
 }

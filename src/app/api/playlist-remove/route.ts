@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { removeFromPlaylist } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
+import { bust } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +21,6 @@ export async function POST(req: NextRequest) {
   if (indices.length === 0) return NextResponse.json({ error: "indices required" }, { status: 400 });
 
   await removeFromPlaylist(playlistId, indices);
+  bust("playlists");
   return NextResponse.json({ ok: true, count: indices.length });
 }

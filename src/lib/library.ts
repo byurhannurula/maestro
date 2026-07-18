@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { env, isNavidromeConfigured } from "./env";
 import { getSongs } from "./native";
 import { ping, getPlaylists, search3Songs, getPlaylistSongs } from "./subsonic";
@@ -131,17 +132,18 @@ function compareBy(sort: SongSortKey, order: "ASC" | "DESC") {
   };
 }
 
-export async function getLibraryPlaylists(): Promise<{
-  playlists: Playlist[];
-  source: "navidrome" | "sample";
-}> {
-  if (!isNavidromeConfigured) return { playlists: samplePlaylists, source: "sample" };
-  try {
-    return { playlists: await getPlaylists(), source: "navidrome" };
-  } catch {
-    return { playlists: samplePlaylists, source: "sample" };
-  }
-}
+// Wrapped in React cache(): the layout and the page both call this in one
+// request, so they share a single Subsonic round-trip instead of two.
+export const getLibraryPlaylists = cache(
+  async (): Promise<{ playlists: Playlist[]; source: "navidrome" | "sample" }> => {
+    if (!isNavidromeConfigured) return { playlists: samplePlaylists, source: "sample" };
+    try {
+      return { playlists: await getPlaylists(), source: "navidrome" };
+    } catch {
+      return { playlists: samplePlaylists, source: "sample" };
+    }
+  },
+);
 
 export interface SystemStatus {
   navidrome: { configured: boolean; reachable: boolean; url: string };

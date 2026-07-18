@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "./env";
+import { cached } from "./cache";
 import type { Song, SongSortKey } from "./types";
 
 /**
@@ -87,7 +88,7 @@ function mapSong(s: RawSong): Song {
   };
 }
 
-export async function getSongs(
+async function getSongsRaw(
   opts: GetSongsOptions = {},
 ): Promise<{ songs: Song[]; total: number }> {
   const token = await login();
@@ -115,4 +116,11 @@ export async function getSongs(
   const totalHeader = res.headers.get("x-total-count");
   const total = totalHeader ? Number(totalHeader) : start + songs.length;
   return { songs, total };
+}
+
+/** Cached song reads (tag "songs", TTL from env; busted on any mutation). */
+export function getSongs(
+  opts: GetSongsOptions = {},
+): Promise<{ songs: Song[]; total: number }> {
+  return cached(`songs:${JSON.stringify(opts)}`, ["songs"], () => getSongsRaw(opts));
 }

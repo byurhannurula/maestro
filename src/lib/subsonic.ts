@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { env } from "./env";
+import { cached } from "./cache";
 import type { Playlist, Song } from "./types";
 
 /**
@@ -66,7 +67,7 @@ interface RawPlaylist {
   public?: boolean;
 }
 
-export async function getPlaylists(): Promise<Playlist[]> {
+async function getPlaylistsRaw(): Promise<Playlist[]> {
   const res = await call<{ playlists?: { playlist?: RawPlaylist[] } }>("getPlaylists.view");
   return (res.playlists?.playlist ?? []).map((p) => ({
     id: p.id,
@@ -75,6 +76,10 @@ export async function getPlaylists(): Promise<Playlist[]> {
     durationSecs: p.duration,
     public: Boolean(p.public),
   }));
+}
+
+export function getPlaylists(): Promise<Playlist[]> {
+  return cached("playlists:all", ["playlists"], getPlaylistsRaw);
 }
 
 export async function star(id: string): Promise<void> {
@@ -150,7 +155,7 @@ function mapSubsonicSong(s: RawSubsonicSong): Song {
  * Used when the browser has a search term — search3 handles fuzzy matching
  * that the Native API's single-field filter can't. Results are relevance-ordered.
  */
-export async function search3Songs(
+async function search3SongsRaw(
   query: string,
   offset: number,
   count: number,
@@ -165,11 +170,22 @@ export async function search3Songs(
   return (res.searchResult3?.song ?? []).map(mapSubsonicSong);
 }
 
+export function search3Songs(query: string, offset: number, count: number): Promise<Song[]> {
+  return cached(`search3:${query}:${offset}:${count}`, ["songs"], () =>
+    search3SongsRaw(query, offset, count),
+  );
+}
+
 /** All tracks in a playlist (playlists are small, so fetched whole). */
-export async function getPlaylistSongs(id: string): Promise<Song[]> {
+async function getPlaylistSongsRaw(id: string): Promise<Song[]> {
   const res = await call<{ playlist?: { entry?: RawSubsonicSong[] } }>("getPlaylist.view", { id });
   // Carry each track's playlist position — Subsonic removes tracks by index.
   return (res.playlist?.entry ?? []).map((s, i) => ({ ...mapSubsonicSong(s), playlistIndex: i }));
+}
+
+// Playlist contents change on add/remove/delete and on song deletion.
+export function getPlaylistSongs(id: string): Promise<Song[]> {
+  return cached(`playlistSongs:${id}`, ["playlists", "songs"], () => getPlaylistSongsRaw(id));
 }
 
 /** Remove tracks from a playlist by their zero-based indices (one atomic call). */

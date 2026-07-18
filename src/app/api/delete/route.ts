@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { moveToTrash } from "@/lib/trash";
 import { startScan } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
+import { bust } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
 
   const results = await moveToTrash(paths);
   const moved = results.filter((r) => r.ok).length;
+  if (moved > 0) bust("songs", "playlists");
 
   // Purge-rescan so Navidrome drops the missing tracks.
   if (moved > 0 && isNavidromeConfigured) {
