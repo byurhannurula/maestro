@@ -136,7 +136,7 @@ export function SongsTable({
   const [reachedEnd, setReachedEnd] = useState(initial.songs.length >= initial.total);
 
   // Persisted UI prefs.
-  const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", []);
+  const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ['album']);
   const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", 100);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());

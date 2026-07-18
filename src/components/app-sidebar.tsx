@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Activity,
   ChevronsUpDown,
   Download,
   ListMusic,
@@ -30,10 +29,9 @@ import {
 
 const NAV = [
   { href: "/", label: "All Songs", icon: ListMusic, exact: true },
-  { href: "/import", label: "Import", icon: Download, exact: false },
   { href: "/playlists", label: "Playlists", icon: ListVideo, exact: false },
   { href: "/cleanup", label: "Cleanup", icon: Trash2, exact: false },
-  { href: "/system", label: "System", icon: Activity, exact: false },
+  { href: "/import", label: "Import", icon: Download, exact: false },
 ] as const;
 
 const rowClass = "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors";
@@ -149,9 +147,6 @@ export function AppSidebar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <p className="px-2.5 pt-1.5 text-xs text-muted-foreground">
-          Player? Use Feishin. This is for organising.
-        </p>
       </div>
     </aside>
   );
