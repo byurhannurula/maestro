@@ -197,15 +197,19 @@ No Redis. The in-process worker reads/writes these rows; the UI polls or subscri
 
 ## 10. Phased build plan
 
-**Phase 1 — Library Browser (default screen).** Native API + Subsonic. Flat sortable/filterable song table, multi-select, bulk favorite/add-to-playlist. No deemix dependency → stable, immediately useful, proves out the track-first shell.
+**Phase 1 — Library Browser (default screen). ✅ Done.** Server-driven flat song table (sort/search/pagination via the Native API + Subsonic), virtualized rows, infinite scroll, multi-select (incl. shift-range), bulk favourite/add-to-playlist/remove/delete, persisted column visibility + page size, album covers, favourites filter.
 
-**Phase 2 — Import pipeline.** Paste/drop txt/csv → deemix search → queue single tracks → scan → match → add to playlist, with the live status table. deemix API is known, so risk here is mostly matching + Deezer flakiness, not discovery.
+**Phase 2 — Import pipeline. ✅ Done.** Paste/drop txt/csv → deemix ARL session login → search → queue single tracks → wait for download → batch scan → match (search3) → add to playlist. Live status table, persisted import history, needs-review manual candidate picker.
 
-**Phase 3 — Cleanup / Delete + Music Folder Browser.** Move-to-`./trash` + purge-rescan, built on Phase 1's selection UI. Smart-playlist-backed stale-finder view. Direct `./music` file browser (§6.6) with the same move-to-trash delete.
+**Phase 3 — Cleanup / Delete. ✅ Delete done; folder browser pending.** Move-to-`./trash` + purge-rescan with a path-listing confirmation dialog; path-traversal guarded. Cleanup view filters to never-played only. *Not yet:* the direct `./music` file browser (§6.6).
 
-**Phase 4 — System Overview + Polish.** The health dashboard (§6.5). Playlist detail/reordering, Tauri wrapper if wanted, optional trash auto-purge/restore, optional beets normalize pass.
+**Phase 4 — System Overview + Polish. ◑ Partial.** Health dashboard (§6.5) done; playlists sidebar + manager (create/open/delete). *Not yet:* trash size / empty-trash, playlist drag-reorder, Tauri wrapper, beets normalize pass.
 
-**Later / additive — Webhook ingest (§6.7).** The `POST /api/webhook/import` endpoint + Shazam→iOS Shortcut flow. Builds directly on the Phase 2 pipeline; can slot in any time after Phase 2.
+**Cross-cutting (done):** playlists in the main sidebar, `?playlist=` scoping, 24h read cache with mutation invalidation, Spotify-green theme, user dropdown, `DEFAULT_PAGE_SIZE` / `CACHE_TTL_SECONDS` env config.
+
+**Later / additive — Webhook ingest (§6.7).** Not started. `POST /api/webhook/import` + Shazam→iOS Shortcut; builds on the Phase 2 pipeline.
+
+**Future ideas:** recommendations ingest (§12), duplicate detection (§13), never-played cutoff for Cleanup (exclude fresh imports), per-row import retry, Deezer-URL import lines.
 
 ## 11. Feedback from the v0.1 scaffold (live testing)
 

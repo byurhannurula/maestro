@@ -42,6 +42,8 @@ All values come from env (see [`.env.example`](./.env.example)); nothing is hard
 | `DEEMIX_ARL` | Deezer ARL token (needed for downloads) | — |
 | `MUSIC_DIR` / `TRASH_DIR` | Container paths for the music + trash volumes | `/music` / `/trash` |
 | `DATABASE_PATH` | App data dir (import history lives alongside) | `/data/maestro.db` |
+| `CACHE_TTL_SECONDS` | How long Navidrome reads are cached (busted on any change) | `86400` |
+| `DEFAULT_PAGE_SIZE` | Initial fetch / default rows per page (user can override in UI) | `25` |
 | `IMPORT_DELAY_MS` / `IMPORT_TIMEOUT_MS` | Import pipeline pacing | `1500` / `300000` |
 | `WEBHOOK_SECRET` / `WEBHOOK_PLAYLIST` | Reserved for the future webhook ingest | — / `Shazam` |
 | `PORT` | Server port | `4544` |
