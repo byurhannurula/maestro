@@ -36,16 +36,33 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
   async function confirmDelete(pl: Playlist) {
     setBusy(true);
     try {
+      let trashed = 0;
+      if (deleteSongs) {
+        // Move the playlist's files to ./trash before removing the playlist.
+        const scoped = await fetch(
+          `/api/songs?playlist=${encodeURIComponent(pl.id)}&start=0&end=2000`,
+        ).then((r) => r.json());
+        const paths: string[] = (scoped.songs ?? [])
+          .map((s: { path?: string }) => s.path)
+          .filter((p: string | undefined): p is string => !!p);
+        if (paths.length > 0) {
+          const del = await fetch("/api/delete", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ paths }),
+          });
+          trashed = (await del.json().catch(() => ({})))?.moved ?? 0;
+        }
+      }
       const res = await fetch(`/api/playlists?id=${encodeURIComponent(pl.id)}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      if (deleteSongs) {
-        // Song trashing rides on the Phase-3 move-to-trash flow.
-        toast.info(`Deleted "${pl.name}". Trashing its ${pl.songCount} songs lands in Phase 3 — files kept for now.`);
-      } else {
-        toast.success(`Deleted "${pl.name}" (songs kept in library)`);
-      }
+      toast.success(
+        deleteSongs
+          ? `Deleted "${pl.name}" and trashed ${trashed} songs`
+          : `Deleted "${pl.name}" (songs kept)`,
+      );
       setPendingId(null);
       setDeleteSongs(false);
       router.refresh();

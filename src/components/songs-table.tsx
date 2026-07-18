@@ -35,6 +35,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PAGE_SIZES = [50, 100, 200, 500];
 
@@ -141,6 +151,8 @@ export function SongsTable({
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [stars, setStars] = useState<Record<string, boolean>>({});
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Server offset + seen-ids are tracked separately from the (deduped) display
   // list so paging stays correct even when the library has duplicate rows.
@@ -374,10 +386,43 @@ export function SongsTable({
     void removeFromPlaylist(indices);
   }
 
+  async function confirmDelete() {
+    const items = songs.filter((s) => selected.has(s.id));
+    const paths = items.map((s) => s.path).filter((p): p is string => !!p);
+    if (paths.length === 0) {
+      toast.error("Selected tracks have no file paths");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/delete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paths }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      toast.success(
+        `Moved ${data.moved} to trash${data.failed ? `, ${data.failed} failed` : ""}`,
+      );
+      const removed = new Set(items.map((s) => s.id));
+      setSongs((prev) => prev.filter((s) => !removed.has(s.id)));
+      setTotal((t) => Math.max(0, t - data.moved));
+      setSelected(new Set());
+      setDeleteOpen(false);
+      router.refresh();
+    } catch (e) {
+      toast.error(`Delete failed: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const allSelected = songs.length > 0 && selected.size === songs.length;
   const someSelected = selected.size > 0 && !allSelected;
   const visibleCols = COLUMNS.filter((c) => show(c.id));
   const colSpan = visibleCols.length + 3;
+  const selectedSongs = songs.filter((s) => selected.has(s.id));
 
   function cellContent(col: Col, s: Song) {
     switch (col.id) {
@@ -631,7 +676,7 @@ export function SongsTable({
               size="sm"
               variant="ghost"
               className="text-destructive hover:text-destructive"
-              onClick={() => toast.warning(`Move ${selected.size} to trash (Phase 3)`)}
+              onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="size-4" /> Delete
             </Button>
@@ -642,6 +687,39 @@ export function SongsTable({
           </div>
         </div>
       )}
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move {selectedSongs.length} track(s) to trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Files move to the <code className="rounded bg-muted px-1">./trash</code> folder
+              (recoverable), then Navidrome is rescanned to drop the missing rows. Nothing is
+              permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 font-mono text-xs">
+            {selectedSongs.map((s) => (
+              <div key={s.id} className="truncate py-0.5" title={s.path}>
+                {s.path ?? <span className="text-red-400">no path — {s.title}</span>}
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleting ? "Moving…" : "Move to trash"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
