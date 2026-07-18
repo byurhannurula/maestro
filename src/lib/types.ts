@@ -7,6 +7,8 @@ export interface Song {
   durationSecs: number;
   playCount: number;
   starred: boolean;
+  /** Cover-art id (album or song) for the /api/cover proxy, when known. */
+  coverArt?: string;
   /** Absolute path inside the shared music volume, when known. */
   path?: string;
   /** ISO timestamps, when known. */
@@ -27,7 +29,31 @@ export type DataSource = "navidrome" | "sample";
 
 export interface SongsResult {
   songs: Song[];
+  /** Total matching rows in the library (for "N songs" + knowing when to stop). */
+  total: number;
   source: DataSource;
   /** Present when source === "sample" because a live fetch failed. */
   error?: string;
+}
+
+export type SongSortKey =
+  | "title"
+  | "artist"
+  | "album"
+  | "playCount"
+  | "createdAt"
+  | "lastPlayed";
+
+export interface SongQuery {
+  start: number;
+  /** Exclusive end index; page size = end - start. */
+  end: number;
+  sort: SongSortKey;
+  order: "ASC" | "DESC";
+  /** Free-text search across title/artist/album. */
+  search?: string;
+  /** Scope to a single playlist's tracks. */
+  playlistId?: string;
+  /** Only starred/favourited tracks. */
+  favoritesOnly?: boolean;
 }

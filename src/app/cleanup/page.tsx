@@ -1,4 +1,4 @@
-import { getLibrarySongs } from "@/lib/library";
+import { getLibrarySongs, getLibraryPlaylists } from "@/lib/library";
 import { nowMs } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";
 import { SourceBanner } from "@/components/source-banner";
@@ -7,22 +7,30 @@ import { SongsTable } from "@/components/songs-table";
 export const dynamic = "force-dynamic";
 
 export default async function CleanupPage() {
-  const { songs, source, error } = await getLibrarySongs({ end: 500, sort: "createdAt" });
+  // Stale finder: least-played first, so never-played tracks surface at the top.
+  const [initial, { playlists }] = await Promise.all([
+    getLibrarySongs({ start: 0, end: 100, sort: "playCount", order: "ASC" }),
+    getLibraryPlaylists(),
+  ]);
   const now = nowMs();
-  // Stale finder: never-played tracks — the dead weight. Delete moves to ./trash.
-  const stale = songs.filter((s) => s.playCount === 0);
 
   return (
     <div className="flex h-full flex-col">
       <div className="shrink-0">
         <PageHeader
           title="Cleanup"
-          subtitle={`${stale.length} never-played tracks. Select and delete — files move to ./trash, nothing is destroyed.`}
+          subtitle="Least-played first — never-played tracks are at the top. Select and delete; files move to ./trash, nothing is destroyed."
         />
-        <SourceBanner source={source} error={error} />
+        <SourceBanner source={initial.source} error={initial.error} />
       </div>
       <div className="min-h-0 flex-1">
-        <SongsTable songs={stale} now={now} />
+        <SongsTable
+          initial={initial}
+          now={now}
+          playlists={playlists}
+          defaultSort="playCount"
+          defaultOrder="ASC"
+        />
       </div>
     </div>
   );

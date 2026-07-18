@@ -22,7 +22,7 @@ const schema = z.object({
   TRASH_DIR: z.string().default("/trash"),
 
   // --- App state ---
-  DATABASE_PATH: z.string().default("/data/navi-organiser.db"),
+  DATABASE_PATH: z.string().default("/data/maestro.db"),
 
   // --- Import pipeline tuning ---
   IMPORT_DELAY_MS: z.coerce.number().int().nonnegative().default(1500),

@@ -1,6 +1,6 @@
 import "server-only";
 import { env } from "./env";
-import type { Song } from "./types";
+import type { Song, SongSortKey } from "./types";
 
 /**
  * Navidrome NATIVE API client (`/api/*`) — the UNSTABLE surface.
@@ -36,27 +36,31 @@ async function login(): Promise<string> {
   return body.token;
 }
 
-export type SongSort =
-  | "title"
-  | "artist"
-  | "album"
-  | "playCount"
-  | "createdAt"
-  | "playDate";
-
 export interface GetSongsOptions {
   start?: number;
   end?: number;
-  sort?: SongSort;
+  sort?: SongSortKey;
   order?: "ASC" | "DESC";
   search?: string;
+  starred?: boolean;
 }
+
+/** Map our sort keys to the Native API's `_sort` field names. */
+const SORT_FIELD: Record<SongSortKey, string> = {
+  title: "title",
+  artist: "artist",
+  album: "album",
+  playCount: "playCount",
+  createdAt: "createdAt",
+  lastPlayed: "playDate",
+};
 
 interface RawSong {
   id: string;
   title: string;
   artist: string;
   album: string;
+  albumId?: string;
   duration: number;
   playCount?: number;
   starred?: boolean;
@@ -74,27 +78,38 @@ function mapSong(s: RawSong): Song {
     durationSecs: Math.round(s.duration ?? 0),
     playCount: s.playCount ?? 0,
     starred: Boolean(s.starred),
+    coverArt: s.albumId ?? s.id,
     path: s.path,
     createdAt: s.createdAt,
     lastPlayed: s.playDate,
   };
 }
 
-export async function getSongs(opts: GetSongsOptions = {}): Promise<Song[]> {
+export async function getSongs(
+  opts: GetSongsOptions = {},
+): Promise<{ songs: Song[]; total: number }> {
   const token = await login();
+  const start = opts.start ?? 0;
+  const end = opts.end ?? 100;
   const params = new URLSearchParams({
-    _start: String(opts.start ?? 0),
-    _end: String(opts.end ?? 100),
-    _sort: opts.sort ?? "title",
+    _start: String(start),
+    _end: String(end),
+    _sort: SORT_FIELD[opts.sort ?? "title"],
     _order: opts.order ?? "ASC",
   });
   if (opts.search) params.set("title", opts.search);
+  if (opts.starred) params.set("starred", "true");
 
   const res = await fetch(`${env.NAVIDROME_URL}/api/song?${params.toString()}`, {
     headers: { "x-nd-authorization": `Bearer ${token}` },
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Native getSongs → HTTP ${res.status}`);
+
   const rows = (await res.json()) as RawSong[];
-  return rows.map(mapSong);
+  const songs = rows.map(mapSong);
+  // Navidrome returns the full match count in the react-admin total header.
+  const totalHeader = res.headers.get("x-total-count");
+  const total = totalHeader ? Number(totalHeader) : start + songs.length;
+  return { songs, total };
 }
