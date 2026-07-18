@@ -168,7 +168,17 @@ export async function search3Songs(
 /** All tracks in a playlist (playlists are small, so fetched whole). */
 export async function getPlaylistSongs(id: string): Promise<Song[]> {
   const res = await call<{ playlist?: { entry?: RawSubsonicSong[] } }>("getPlaylist.view", { id });
-  return (res.playlist?.entry ?? []).map(mapSubsonicSong);
+  // Carry each track's playlist position — Subsonic removes tracks by index.
+  return (res.playlist?.entry ?? []).map((s, i) => ({ ...mapSubsonicSong(s), playlistIndex: i }));
+}
+
+/** Remove tracks from a playlist by their zero-based indices (one atomic call). */
+export async function removeFromPlaylist(playlistId: string, indices: number[]): Promise<void> {
+  if (indices.length === 0) return;
+  const params = authParams();
+  params.set("playlistId", playlistId);
+  for (const idx of indices) params.append("songIndexToRemove", String(idx));
+  await request("updatePlaylist.view", params);
 }
 
 /** Server-side authed cover-art URL (proxied by /api/cover, never sent to the browser). */

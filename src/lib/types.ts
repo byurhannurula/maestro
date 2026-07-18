@@ -9,6 +9,8 @@ export interface Song {
   starred: boolean;
   /** Cover-art id (album or song) for the /api/cover proxy, when known. */
   coverArt?: string;
+  /** Zero-based position within the current playlist (only when playlist-scoped). */
+  playlistIndex?: number;
   /** Absolute path inside the shared music volume, when known. */
   path?: string;
   /** ISO timestamps, when known. */

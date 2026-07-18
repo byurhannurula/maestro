@@ -7,12 +7,14 @@ import {
   ArrowUp,
   Heart,
   ListPlus,
+  ListX,
   Loader2,
   Music,
   Plus,
   Search,
   SlidersHorizontal,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { DataSource, Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
@@ -346,6 +348,32 @@ export function SongsTable({
     }
   }
 
+  async function removeFromPlaylist(indices: number[]) {
+    if (!playlistId || indices.length === 0) return;
+    try {
+      const res = await fetch("/api/playlist-remove", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ playlistId, indices }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast.success(`Removed ${indices.length} from playlist`);
+      setSelected(new Set());
+      router.refresh(); // sidebar counts
+      void fetchPage(true); // reload playlist with fresh indices
+    } catch (e) {
+      toast.error(`Remove failed: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  function bulkRemoveFromPlaylist() {
+    const indices = songs
+      .filter((s) => selected.has(s.id))
+      .map((s) => s.playlistIndex)
+      .filter((n): n is number => n != null);
+    void removeFromPlaylist(indices);
+  }
+
   const allSelected = songs.length > 0 && selected.size === songs.length;
   const someSelected = selected.size > 0 && !allSelected;
   const visibleCols = COLUMNS.filter((c) => show(c.id));
@@ -524,19 +552,31 @@ export function SongsTable({
                     </td>
                   ))}
                   <td className="border-b border-border/50 px-3 py-2 pr-6">
-                    <button
-                      aria-label={on ? "Unfavorite" : "Favorite"}
-                      onClick={() => toggleHeart(s)}
-                    >
-                      <Heart
-                        className={cn(
-                          "size-4 transition-colors",
-                          on
-                            ? "fill-primary text-primary"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        aria-label={on ? "Unfavorite" : "Favorite"}
+                        onClick={() => toggleHeart(s)}
+                      >
+                        <Heart
+                          className={cn(
+                            "size-4 transition-colors",
+                            on
+                              ? "fill-primary text-primary"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        />
+                      </button>
+                      {playlistId && s.playlistIndex != null && (
+                        <button
+                          aria-label="Remove from playlist"
+                          title="Remove from playlist"
+                          onClick={() => removeFromPlaylist([s.playlistIndex!])}
+                          className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -582,6 +622,11 @@ export function SongsTable({
             <Button size="sm" variant="ghost" onClick={bulkFavorite}>
               <Heart className="size-4" /> Favourite
             </Button>
+            {playlistId && (
+              <Button size="sm" variant="ghost" onClick={bulkRemoveFromPlaylist}>
+                <ListX className="size-4" /> Remove from playlist
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
