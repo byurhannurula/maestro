@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const PAGE_SIZES = [50, 100, 200, 500];
+const PAGE_SIZES = [25, 50, 100, 200, 500];
 
 type ColId = "title" | "artist" | "album" | "playCount" | "added" | "lastPlayed" | "duration";
 
@@ -55,17 +55,29 @@ interface Col {
   sortKey: SongSortKey | null;
   label: string;
   align?: "right";
+  /** Fixed width in px; title is left flexible (undefined). */
+  width?: number;
 }
 
 const COLUMNS: Col[] = [
   { id: "title", sortKey: "title", label: "Title" },
-  { id: "artist", sortKey: "artist", label: "Artist" },
-  { id: "album", sortKey: "album", label: "Album" },
-  { id: "playCount", sortKey: "playCount", label: "Plays", align: "right" },
-  { id: "added", sortKey: "createdAt", label: "Added", align: "right" },
-  { id: "lastPlayed", sortKey: "lastPlayed", label: "Last played", align: "right" },
-  { id: "duration", sortKey: null, label: "Time", align: "right" },
+  { id: "artist", sortKey: "artist", label: "Artist", width: 190 },
+  { id: "album", sortKey: "album", label: "Album", width: 200 },
+  { id: "playCount", sortKey: "playCount", label: "Plays", align: "right", width: 76 },
+  { id: "added", sortKey: "createdAt", label: "Added", align: "right", width: 116 },
+  { id: "lastPlayed", sortKey: "lastPlayed", label: "Last played", align: "right", width: 128 },
+  { id: "duration", sortKey: null, label: "Time", align: "right", width: 66 },
 ];
+
+// Text columns that should truncate + reveal the full value on hover.
+const TEXT_COLS = new Set<ColId>(["title", "artist", "album"]);
+
+function textOf(col: Col, s: Song): string {
+  if (col.id === "title") return s.title;
+  if (col.id === "artist") return s.artist;
+  if (col.id === "album") return s.album;
+  return "";
+}
 
 const TOGGLEABLE: ColId[] = ["artist", "album", "playCount", "added", "lastPlayed", "duration"];
 const DEFAULT_DESC: SongSortKey[] = ["playCount", "createdAt", "lastPlayed"];
@@ -155,6 +167,8 @@ export function SongsTable({
   const [stars, setStars] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showTop, setShowTop] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Server offset + seen-ids are tracked separately from the (deduped) display
   // list so paging stays correct even when the library has duplicate rows.
@@ -520,11 +534,15 @@ export function SongsTable({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 600)}
+        className="flex-1 overflow-auto"
+      >
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-10 bg-background">
             <tr>
-              <th className="border-b border-border px-3 py-2 pl-6">
+              <th className="border-b border-border px-3 py-2 pl-6" style={{ width: 48 }}>
                 <Checkbox
                   checked={allSelected}
                   indeterminate={someSelected}
@@ -534,11 +552,15 @@ export function SongsTable({
                   aria-label="Select all loaded"
                 />
               </th>
-              <th className="border-b border-border px-2 py-2" />
+              <th className="border-b border-border px-2 py-2" style={{ width: 52 }} />
               {visibleCols.map((col) => {
                 const active = col.sortKey !== null && sort === col.sortKey;
                 return (
-                  <th key={col.id} className="border-b border-border px-3 py-2 text-left">
+                  <th
+                    key={col.id}
+                    style={{ width: col.width }}
+                    className="border-b border-border px-3 py-2 text-left"
+                  >
                     {col.sortKey === null || unplayedOnly ? (
                       <span
                         className={cn(
@@ -569,7 +591,7 @@ export function SongsTable({
                   </th>
                 );
               })}
-              <th className="border-b border-border px-3 py-2 pr-6" />
+              <th className="border-b border-border px-3 py-2 pr-6" style={{ width: 96 }} />
             </tr>
           </thead>
           <tbody>
@@ -598,9 +620,24 @@ export function SongsTable({
                       className={cn(
                         "border-b border-border/50 px-3 py-2",
                         col.align === "right" && "text-right",
+                        // Title cell is greedy + shrinkable so long names truncate.
+                        col.id === "title" && "w-full max-w-0",
                       )}
                     >
-                      {cellContent(col, s)}
+                      {TEXT_COLS.has(col.id) ? (
+                        <div
+                          className={cn(
+                            "truncate",
+                            col.id === "artist" && "max-w-44",
+                            col.id === "album" && "max-w-52",
+                          )}
+                          title={textOf(col, s)}
+                        >
+                          {cellContent(col, s)}
+                        </div>
+                      ) : (
+                        cellContent(col, s)
+                      )}
                     </td>
                   ))}
                   <td className="border-b border-border/50 px-3 py-2 pr-6">
@@ -693,6 +730,16 @@ export function SongsTable({
             </Button>
           </div>
         </div>
+      )}
+
+      {showTop && (
+        <button
+          onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Scroll to top"
+          className="absolute bottom-6 right-6 z-20 flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-lg transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ArrowUp className="size-4" />
+        </button>
       )}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -15,7 +15,7 @@ export default async function AllSongsPage({
   const playlistId = playlist || undefined;
 
   const [initial, playlistsRes] = await Promise.all([
-    getLibrarySongs({ start: 0, end: 100, sort: "title", order: "ASC", playlistId }),
+    getLibrarySongs({ start: 0, end: 25, sort: "createdAt", order: "DESC", playlistId }),
     getLibraryPlaylists(),
   ]);
 
@@ -45,6 +45,8 @@ export default async function AllSongsPage({
           now={now}
           playlists={playlists}
           playlistId={playlistId}
+          defaultSort="createdAt"
+          defaultOrder="DESC"
         />
       </div>
     </div>
