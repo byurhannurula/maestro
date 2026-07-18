@@ -1,0 +1,133 @@
+services:
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_PASSWORDENCRYPTIONKEY=${ND_PASSWORDENCRYPTIONKEY}
+      - ND_SESSIONTIMEOUT=24h
+      - ND_LASTFM_APIKEY=${ND_LASTFM_APIKEY}
+      - ND_LASTFM_SECRET=${ND_LASTFM_SECRET}
+      - ND_LISTENBRAINZ_ENABLED=true
+      - ND_AUTOIMPORTPLAYLISTS=true
+      # - ND_PLAYLISTSPATH=/music/playlists
+      - ND_BASEURL=/ # Important for reverse proxy
+      - ND_ENABLETRANSCODINGCONFIG=true
+      - ND_ENABLEDOWNLOADS=true
+    volumes:
+      - ./navidrome/data:/data
+      - ./music:/music:ro
+    ports:
+      - 4533:4533
+    restart: unless-stopped
+    networks:
+      - default
+  explo:
+    image: ghcr.io/lumepart/explo:latest
+    container_name: explo
+    ports:
+      - 7288:7288
+    volumes:
+      - ./.env:/opt/explo/.env
+      - ./config:/opt/explo/config
+      - ./music/explo:/data/
+    environment:
+      - TZ=${TZ}
+      - WEB_UI=true
+      # Web UI credentials (required for login)
+      - UI_USERNAME=demo
+      - UI_PASSWORD=demo
+    depends_on:
+      - navidrome
+    restart: unless-stopped
+    networks:
+      - default
+  feishin:
+    image: ghcr.io/jeffvli/feishin:latest
+    container_name: feishin
+    restart: unless-stopped
+    environment:
+      - SERVER_NAME=navidrome
+      - SERVER_LOCK=false
+      - SERVER_TYPE=navidrome
+      - SERVER_URL=http://navidrome:4533
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    ports:
+      - 9180:9180
+    depends_on:
+      - navidrome
+    networks:
+      - default
+  beets:
+    image: lscr.io/linuxserver/beets:latest
+    container_name: beets
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./beets/config:/config
+      - ./music:/music
+  deemix:
+    image: ghcr.io/bambanah/deemix:latest
+    container_name: deemix
+    ports:
+      - 6595:6595
+    volumes:
+      - ./music:/downloads
+      - ./deemix:/config
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    restart: unless-stopped
+    networks:
+      - default
+  navi-organiser:
+    # Build locally, or pull the published image once released.
+    # Replace OWNER with your GitHub username/org for GHCR.
+    image: ghcr.io/OWNER/navi-organiser:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: navi-organiser
+    # Run as the host user so the app can write to the shared volumes.
+    user: "${PUID}:${PGID}"
+    ports:
+      - 4544:4544
+    environment:
+      # Internal docker hostname — reachable inside the compose network.
+      - NAVIDROME_URL=http://navidrome:4533
+      - NAVIDROME_USERNAME=${NAVIDROME_USERNAME}
+      - NAVIDROME_PASSWORD=${NAVIDROME_PASSWORD}
+      - DEEMIX_URL=http://deemix:6595
+      - DEEMIX_ARL=${DEEMIX_ARL:-}
+      - MUSIC_DIR=/music
+      - TRASH_DIR=/trash
+      - DATABASE_PATH=/data/navi-organiser.db
+      - IMPORT_DELAY_MS=1500
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      - WEBHOOK_PLAYLIST=Shazam
+      - PORT=4544
+      - TZ=${TZ}
+    volumes:
+      # Read-write: the app deletes by moving files out of the library.
+      - ./music:/music
+      - ./trash:/trash
+      - ./navi-organiser-data:/data
+    depends_on:
+      - navidrome
+      - deemix
+    restart: unless-stopped
+    networks:
+      - default
+networks:
+  default:
+    driver: bridge

@@ -1,0 +1,14 @@
+# Supply-chain hardening: refuse package versions published in the last 48h.
+# Catches most worm-style attacks before they reach this machine.
+# Tune the value (minutes) here, or run /harden-deps.
+minimumReleaseAge: 2880
+
+# Trusted native-binary packages allowed to run install build scripts.
+# Everything else is blocked from running lifecycle scripts by default.
+onlyBuiltDependencies:
+  - sharp
+  - unrs-resolver
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true

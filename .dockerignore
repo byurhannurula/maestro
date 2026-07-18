@@ -1,0 +1,38 @@
+# deps & build artifacts (reinstalled/rebuilt in the image)
+node_modules
+.next
+out
+build
+
+# vcs & tooling
+.git
+.github
+.claude
+.vscode
+
+# env & secrets — never bake into the image
+.env
+.env.*
+!.env.example
+
+# docs & meta
+docs
+*.md
+!AGENTS.md
+
+# homelab stack runtime data (bind mounts, not app code)
+music
+trash
+navidrome
+deemix
+beets
+config
+navi-organiser-data
+data
+
+# misc
+.DS_Store
+Dockerfile
+.dockerignore
+docker-compose.yml
+coverage
