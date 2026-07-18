@@ -43,6 +43,8 @@ export interface GetSongsOptions {
   order?: "ASC" | "DESC";
   search?: string;
   starred?: boolean;
+  /** Extra raw filter params passed through to the Native API. */
+  filters?: Record<string, string>;
 }
 
 /** Map our sort keys to the Native API's `_sort` field names. */
@@ -99,6 +101,7 @@ export async function getSongs(
   });
   if (opts.search) params.set("title", opts.search);
   if (opts.starred) params.set("starred", "true");
+  if (opts.filters) for (const [k, v] of Object.entries(opts.filters)) params.set(k, v);
 
   const res = await fetch(`${env.NAVIDROME_URL}/api/song?${params.toString()}`, {
     headers: { "x-nd-authorization": `Bearer ${token}` },

@@ -58,4 +58,6 @@ export interface SongQuery {
   playlistId?: string;
   /** Only starred/favourited tracks. */
   favoritesOnly?: boolean;
+  /** Cleanup: only never-played tracks (playCount 0). */
+  unplayedOnly?: boolean;
 }

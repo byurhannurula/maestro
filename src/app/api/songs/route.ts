@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   const search = sp.get("search") ?? undefined;
   const playlistId = sp.get("playlist") ?? undefined;
   const favoritesOnly = sp.get("favorites") === "1";
+  const unplayedOnly = sp.get("unplayed") === "1";
 
   const result = await getLibrarySongs({
     start,
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
     search,
     playlistId,
     favoritesOnly,
+    unplayedOnly,
   });
   return NextResponse.json(result);
 }

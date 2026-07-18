@@ -125,6 +125,7 @@ export function SongsTable({
   defaultSort = "title",
   defaultOrder = "ASC",
   playlistId,
+  unplayedOnly = false,
 }: {
   initial: SongsResult;
   now: number;
@@ -132,6 +133,7 @@ export function SongsTable({
   defaultSort?: SongSortKey;
   defaultOrder?: "ASC" | "DESC";
   playlistId?: string;
+  unplayedOnly?: boolean;
 }) {
   const router = useRouter();
   const [songs, setSongs] = useState<Song[]>(initial.songs);
@@ -181,6 +183,7 @@ export function SongsTable({
       if (term) params.set("search", term);
       if (playlistId) params.set("playlist", playlistId);
       if (favoritesOnly) params.set("favorites", "1");
+      if (unplayedOnly) params.set("unplayed", "1");
 
       setLoading(true);
       try {
@@ -214,7 +217,7 @@ export function SongsTable({
         inFlight.current = false;
       }
     },
-    [sort, order, search, playlistId, favoritesOnly, pageSize],
+    [sort, order, search, playlistId, favoritesOnly, pageSize, unplayedOnly],
   );
 
   useEffect(() => {
@@ -509,7 +512,11 @@ export function SongsTable({
         <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground tabular-nums">
           {loading && <Loader2 className="size-4 animate-spin" />}
           {source === "sample" && <span className="text-amber-400">sample</span>}
-          showing {songs.length.toLocaleString()} of {total.toLocaleString()}
+          {unplayedOnly ? (
+            <>{songs.length.toLocaleString()} never-played{reachedEnd ? "" : "+"}</>
+          ) : (
+            <>showing {songs.length.toLocaleString()} of {total.toLocaleString()}</>
+          )}
         </div>
       </div>
 
@@ -532,7 +539,7 @@ export function SongsTable({
                 const active = col.sortKey !== null && sort === col.sortKey;
                 return (
                   <th key={col.id} className="border-b border-border px-3 py-2 text-left">
-                    {col.sortKey === null ? (
+                    {col.sortKey === null || unplayedOnly ? (
                       <span
                         className={cn(
                           "text-xs font-medium text-muted-foreground",

@@ -19,10 +19,39 @@ export async function getLibrarySongs(q: SongQuery): Promise<SongsResult> {
   const search = q.search?.trim();
 
   if (!isNavidromeConfigured) {
-    return { ...processInMemory(sampleSongs, q, search), source: "sample" };
+    const pool = q.unplayedOnly ? sampleSongs.filter((s) => s.playCount === 0) : sampleSongs;
+    return { ...processInMemory(pool, q, search), source: "sample" };
   }
 
   try {
+    // Cleanup: never-played tracks. The play_count *filter* is unreliable
+    // (unplayed rows store NULL, not 0), but sorting by playCount ASC puts all
+    // zeros contiguously at the top — so fetch sorted and stop at the boundary.
+    if (q.unplayedOnly) {
+      const pageSize = q.end - q.start;
+      const { songs } = await getSongs({
+        start: q.start,
+        end: q.end,
+        sort: "playCount",
+        order: "ASC",
+        search,
+        starred: q.favoritesOnly,
+      });
+      const zeros: typeof songs = [];
+      let boundary = false;
+      for (const s of songs) {
+        if (s.playCount === 0) zeros.push(s);
+        else {
+          boundary = true;
+          break;
+        }
+      }
+      const done = boundary || songs.length < pageSize;
+      // total drives the client's stop condition: exact when done, "+more" while not.
+      const total = done ? q.start + zeros.length : q.start + pageSize + 1;
+      return { songs: zeros, total, source: "navidrome" };
+    }
+
     // Scoped to a playlist: playlists are small, so fetch whole then process.
     if (q.playlistId) {
       const rows = await getPlaylistSongs(q.playlistId);
