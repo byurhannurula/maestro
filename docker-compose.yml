@@ -90,14 +90,14 @@ services:
     restart: unless-stopped
     networks:
       - default
-  navi-organiser:
+  maestro:
     # Build locally, or pull the published image once released.
     # Replace OWNER with your GitHub username/org for GHCR.
-    image: ghcr.io/OWNER/navi-organiser:latest
+    image: ghcr.io/OWNER/maestro:latest
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: navi-organiser
+    container_name: maestro
     # Run as the host user so the app can write to the shared volumes.
     user: "${PUID}:${PGID}"
     ports:
@@ -111,7 +111,7 @@ services:
       - DEEMIX_ARL=${DEEMIX_ARL:-}
       - MUSIC_DIR=/music
       - TRASH_DIR=/trash
-      - DATABASE_PATH=/data/navi-organiser.db
+      - DATABASE_PATH=/data/maestro.db
       - IMPORT_DELAY_MS=1500
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
       - WEBHOOK_PLAYLIST=Shazam
@@ -121,7 +121,7 @@ services:
       # Read-write: the app deletes by moving files out of the library.
       - ./music:/music
       - ./trash:/trash
-      - ./navi-organiser-data:/data
+      - ./maestro-data:/data
     depends_on:
       - navidrome
       - deemix

@@ -1,4 +1,4 @@
-# PRD: Navidrome Organizer
+# PRD: Maestro
 
 *A self-hosted, **track-first** companion app for bulk importing, organizing, and cleaning up a Navidrome library. Not a player — a manager.*
 
@@ -42,7 +42,7 @@ Just Byurhan, self-hosted on a small homelab PC, accessed from a Mac browser (op
 
 ```
                  ┌──────────────┐
-   paste/drop ──▶ │   Organizer   │ ──▶ deemix webui REST API (search + queue downloads)
+   paste/drop ──▶ │    Maestro    │ ──▶ deemix webui REST API (search + queue downloads)
    txt/csv list   │   (this app)  │
                  │  track-first  │ ──▶ Navidrome Subsonic API (/rest/*)  [stable]
                  │  Next.js/TS   │ ──▶ Navidrome Native API (/api/*)     [sorting only, unstable]
@@ -206,3 +206,38 @@ No Redis. The in-process worker reads/writes these rows; the UI polls or subscri
 **Phase 4 — System Overview + Polish.** The health dashboard (§6.5). Playlist detail/reordering, Tauri wrapper if wanted, optional trash auto-purge/restore, optional beets normalize pass.
 
 **Later / additive — Webhook ingest (§6.7).** The `POST /api/webhook/import` endpoint + Shazam→iOS Shortcut flow. Builds directly on the Phase 2 pipeline; can slot in any time after Phase 2.
+
+## 11. Feedback from the v0.1 scaffold (live testing)
+
+Notes from running the scaffold against the real library — folded into the phases above.
+
+- **Library is capped at 500 / date-sort is wrong.** The Native API is fetched with `_end: 500` sorted by title, so "date added = today" is incomplete (today's tracks outside the first 500-by-title aren't loaded). **Fix (Phase 2):** push sort+filter to the server (Native API `_sort`/`_order` + total-count header) and paginate/virtualize instead of client-sorting a fixed 500.
+- **Import — target playlist should be a dropdown.** Replace the free-text playlist input with a combobox of existing playlists + "create new" inline. (Ties to Create Playlist below.)
+- **Import — show pipeline status on the same page.** Below the paste box, live per-row status (`queued → downloading → scanning → matched → added` / failed) so you watch progress without leaving the screen.
+- **Create playlist.** First-class action (in the playlist sidebar and the import target dropdown) → Subsonic `createPlaylist`.
+- **Second, collapsible playlist sidebar.** A mail-app-style secondary pane listing all playlists; click a playlist → the main table shows only that playlist's tracks (track-first, no album pages). Complements the primary nav sidebar.
+- **Cleanup semantics (clarified).** The Cleanup view only *lists* never-played candidates (`playCount == 0`); nothing is marked or deleted until you select + confirm (→ move to `./trash`, Phase 3).
+- **More configuration on the System page.** Beyond health: editable/read-back settings surfaced from env (import delay, default bitrate, webhook playlist name, trash path), scan controls (trigger scan, show scan status), and connection tests for Navidrome/deemix.
+- **Deployment target is the VM, not local.** Docker images build/run on the VM at the end; skip local image builds during development. `pnpm dev` against the live Navidrome (via `.env.local`) is the working loop.
+
+## 12. Future — Recommendations ingest (explo / MusicBrainz / ListenBrainz)
+
+A discovery surface *inside* this app, closing the loop with the existing stack:
+
+- Pull recommendation feeds the stack already produces — **explo**'s weekly picks, and **MusicBrainz/ListenBrainz** suggestions (the ListenBrainz "recommended tracks" / "created for you" endpoints, keyed off the scrobbles Navidrome already sends).
+- Show them as a review list: for each suggested track, "already in library?" (matched via Subsonic) vs "new".
+- One-click **queue the new ones through the same import pipeline** (§6.1) into a target/recommendations playlist.
+- Purely additive and optional — sits alongside explo's own weekly-playlist creation, giving a manual "see what's recommended → download what I want" flow rather than fully-automatic downloading.
+
+## 13. Future — Duplicate detection
+
+The library already contains real duplicates (e.g. `Dua Lipa - IDGAF` indexed twice), so a dedicated finder earns its place:
+
+- **Detection signals (layered):**
+  - *Metadata match* — normalized `artist + title` (lowercased, feat/remaster-stripped, punctuation-folded) collision. Fast, catches re-downloads and near-identical tags.
+  - *Acoustic/ID match* — same MusicBrainz Recording ID or Deezer/ISRC when present in tags; stronger than string match.
+  - *File match* — identical size / content hash under `./music` (via the §6.6 folder browser), catches byte-identical copies in different folders.
+- **UI:** a grouped view — each cluster of suspected duplicates with their paths, bitrate, play count, date added. Pick a keeper; **trash the rest** through the same safe move-to-`./trash` flow (§6.4). Never auto-delete.
+- **Ties into:** Cleanup (§6.4), the Music Folder Browser (§6.6), and the "queue single tracks, not playlists" import rule (§6.1) that prevents *new* duplicates at the source.
+
+Slots in after Phase 3 (needs the delete/trash + folder-browser plumbing).

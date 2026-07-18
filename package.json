@@ -1,5 +1,5 @@
 {
-  "name": "navi-organiser",
+  "name": "maestro",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.5.0",
@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "docker:build": "docker build -t navi-organiser:local .",
-    "docker:run": "docker run --rm -p 4544:4544 --env-file .env navi-organiser:local",
+    "docker:build": "docker build -t maestro:local .",
+    "docker:run": "docker run --rm -p 4544:4544 --env-file .env maestro:local",
     "release:patch": "npm version patch -m 'release: v%s' && git push --follow-tags",
     "release:minor": "npm version minor -m 'release: v%s' && git push --follow-tags",
     "release:major": "npm version major -m 'release: v%s' && git push --follow-tags"
