@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown,
   ArrowUp,
@@ -17,8 +18,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { DataSource, Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
+import type { Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
 import { formatDuration, relativeTime } from "@/lib/format";
+import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,6 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const PAGE_SIZES = [25, 50, 100, 200, 500];
+const ROW_HEIGHT = 53;
 
 type ColId = "title" | "artist" | "album" | "playCount" | "added" | "lastPlayed" | "duration";
 
@@ -55,13 +58,14 @@ interface Col {
   sortKey: SongSortKey | null;
   label: string;
   align?: "right";
-  /** Fixed width in px; title is left flexible (undefined). */
+  /** Fixed width in px (table-fixed keeps columns stable while virtualized).
+   *  Omit to let the column flex and absorb slack (keeps the layout gap-free). */
   width?: number;
 }
 
 const COLUMNS: Col[] = [
-  { id: "title", sortKey: "title", label: "Title" },
-  { id: "artist", sortKey: "artist", label: "Artist", width: 190 },
+  { id: "title", sortKey: "title", label: "Title", width: 240 },
+  { id: "artist", sortKey: "artist", label: "Artist", width: 220 },
   { id: "album", sortKey: "album", label: "Album", width: 200 },
   { id: "playCount", sortKey: "playCount", label: "Plays", align: "right", width: 76 },
   { id: "added", sortKey: "createdAt", label: "Added", align: "right", width: 116 },
@@ -69,8 +73,21 @@ const COLUMNS: Col[] = [
   { id: "duration", sortKey: null, label: "Time", align: "right", width: 66 },
 ];
 
-// Text columns that should truncate + reveal the full value on hover.
 const TEXT_COLS = new Set<ColId>(["title", "artist", "album"]);
+const TOGGLEABLE: ColId[] = ["artist", "album", "playCount", "added", "lastPlayed", "duration"];
+const DEFAULT_DESC: SongSortKey[] = ["playCount", "createdAt", "lastPlayed"];
+
+// CSS-grid tracks: title widest, artist/album medium & equal, stats compact.
+// minmax(0, …fr) lets the flexible columns shrink so text truncates cleanly.
+const GRID: Record<ColId, string> = {
+  title: "minmax(0, 3fr)",
+  artist: "minmax(0, 1.6fr)",
+  album: "minmax(0, 1.6fr)",
+  playCount: "72px",
+  added: "116px",
+  lastPlayed: "128px",
+  duration: "64px",
+};
 
 function textOf(col: Col, s: Song): string {
   if (col.id === "title") return s.title;
@@ -79,9 +96,6 @@ function textOf(col: Col, s: Song): string {
   return "";
 }
 
-const TOGGLEABLE: ColId[] = ["artist", "album", "playCount", "added", "lastPlayed", "duration"];
-const DEFAULT_DESC: SongSortKey[] = ["playCount", "createdAt", "lastPlayed"];
-
 /** State backed by localStorage, so UI prefs survive reloads. */
 function usePersistent<T>(key: string, initial: T): [T, (v: T | ((p: T) => T)) => void] {
   const [state, setState] = useState<T>(initial);
@@ -89,7 +103,6 @@ function usePersistent<T>(key: string, initial: T): [T, (v: T | ((p: T) => T)) =
   useEffect(() => {
     try {
       const raw = localStorage.getItem(key);
-      // Hydrate persisted UI prefs once, after mount (avoids SSR mismatch).
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw != null) setState(JSON.parse(raw) as T);
     } catch {
@@ -136,6 +149,7 @@ export function SongsTable({
   playlists = [],
   defaultSort = "title",
   defaultOrder = "ASC",
+  defaultPageSize = 25,
   playlistId,
   unplayedOnly = false,
 }: {
@@ -144,112 +158,62 @@ export function SongsTable({
   playlists?: Playlist[];
   defaultSort?: SongSortKey;
   defaultOrder?: "ASC" | "DESC";
+  defaultPageSize?: number;
   playlistId?: string;
   unplayedOnly?: boolean;
 }) {
   const router = useRouter();
-  const [songs, setSongs] = useState<Song[]>(initial.songs);
-  const [total, setTotal] = useState(initial.total);
-  const [source, setSource] = useState<DataSource>(initial.source);
+
+  // Query state (owned here; drives the data hook).
   const [sort, setSort] = useState<SongSortKey>(defaultSort);
   const [order, setOrder] = useState<"ASC" | "DESC">(defaultOrder);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [reachedEnd, setReachedEnd] = useState(initial.songs.length >= initial.total);
+  const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ["album"]);
+  const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", defaultPageSize);
 
-  // Persisted UI prefs.
-  const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ['album']);
-  const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", 100);
+  const { songs, setSongs, total, source, loading, reachedEnd, loadMore, reload } =
+    useInfiniteSongs(initial, {
+      sort,
+      order,
+      search,
+      playlistId,
+      favoritesOnly,
+      unplayedOnly,
+      pageSize,
+    });
 
+  // Interaction state.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [stars, setStars] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-
-  // Server offset + seen-ids are tracked separately from the (deduped) display
-  // list so paging stays correct even when the library has duplicate rows.
-  const serverOffset = useRef(initial.songs.length);
-  const seenIds = useRef(new Set(initial.songs.map((s) => s.id)));
-  const firstRun = useRef(true);
-  const inFlight = useRef(false);
   const shiftDown = useRef(false);
   const lastIndex = useRef<number | null>(null);
 
   const show = (id: ColId) => !hiddenCols.includes(id);
-
-  const fetchPage = useCallback(
-    async (reset: boolean) => {
-      if (inFlight.current) return;
-      inFlight.current = true;
-
-      const start = reset ? 0 : serverOffset.current;
-      const params = new URLSearchParams({
-        start: String(start),
-        end: String(start + pageSize),
-        sort,
-        order,
-      });
-      const term = search.trim();
-      if (term) params.set("search", term);
-      if (playlistId) params.set("playlist", playlistId);
-      if (favoritesOnly) params.set("favorites", "1");
-      if (unplayedOnly) params.set("unplayed", "1");
-
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/songs?${params.toString()}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: SongsResult = await res.json();
-
-        if (reset) {
-          seenIds.current = new Set(data.songs.map((s) => s.id));
-          setSongs(data.songs);
-        } else {
-          const fresh = data.songs.filter((s) => !seenIds.current.has(s.id));
-          fresh.forEach((s) => seenIds.current.add(s.id));
-          setSongs((prev) => [...prev, ...fresh]);
-        }
-        serverOffset.current = start + data.songs.length;
-        setTotal(data.total);
-        setSource(data.source);
-
-        // search3 has no exact total → page-size heuristic; else stop at total.
-        const heuristicOnly = !!term && !playlistId;
-        const done =
-          data.songs.length === 0 ||
-          (heuristicOnly ? data.songs.length < pageSize : serverOffset.current >= data.total);
-        setReachedEnd(done);
-      } catch (e) {
-        toast.error(`Failed to load songs: ${e instanceof Error ? e.message : e}`);
-        setReachedEnd(true);
-      } finally {
-        setLoading(false);
-        inFlight.current = false;
-      }
-    },
-    [sort, order, search, playlistId, favoritesOnly, pageSize, unplayedOnly],
+  const visibleCols = COLUMNS.filter((c) => show(c.id));
+  // checkbox + cover + data columns + actions.
+  const gridTemplateColumns = ["44px", "48px", ...visibleCols.map((c) => GRID[c.id]), "88px"].join(
+    " ",
   );
 
+  // Debounce the search box.
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 350);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Re-query from the top whenever the query changes.
+  // Clear selection whenever the query changes.
   useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
     setSelected(new Set());
     lastIndex.current = null;
-    void fetchPage(true);
-  }, [fetchPage]);
+  }, [sort, order, search, playlistId, favoritesOnly, unplayedOnly, pageSize]);
 
+  // Track Shift for range selection.
   useEffect(() => {
     const d = (e: KeyboardEvent) => {
       if (e.key === "Shift") shiftDown.current = true;
@@ -265,19 +229,18 @@ export function SongsTable({
     };
   }, []);
 
-  const sentinelRef = useRef<HTMLTableRowElement | null>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loading && !reachedEnd) void fetchPage(false);
-      },
-      { rootMargin: "400px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [fetchPage, loading, reachedEnd]);
+  // Virtualize rows so only what's on screen is in the DOM.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const rowVirtualizer = useVirtualizer({
+    count: songs.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 8,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
+  // (No auto-fill on mount — the initial page is exactly DEFAULT_PAGE_SIZE.
+  // Further pages load only when the user scrolls near the bottom; see onScroll.)
 
   function toggleSort(key: SongSortKey) {
     if (sort === key) setOrder((o) => (o === "ASC" ? "DESC" : "ASC"));
@@ -320,9 +283,9 @@ export function SongsTable({
   function toggleHeart(s: Song) {
     const current = stars[s.id] ?? s.starred;
     const next = !current;
-    setStars((prev) => ({ ...prev, [s.id]: next })); // optimistic
+    setStars((prev) => ({ ...prev, [s.id]: next }));
     persistStar([s.id], next).catch((e) => {
-      setStars((prev) => ({ ...prev, [s.id]: current })); // revert
+      setStars((prev) => ({ ...prev, [s.id]: current }));
       toast.error(`Favourite failed: ${e instanceof Error ? e.message : e}`);
     });
   }
@@ -353,7 +316,7 @@ export function SongsTable({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast.success(`Added ${songIds.length} to "${name}"`);
       setSelected(new Set());
-      router.refresh(); // refresh sidebar playlist counts
+      router.refresh();
     } catch (e) {
       toast.error(`Add failed: ${e instanceof Error ? e.message : e}`);
     }
@@ -388,8 +351,8 @@ export function SongsTable({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast.success(`Removed ${indices.length} from playlist`);
       setSelected(new Set());
-      router.refresh(); // sidebar counts
-      void fetchPage(true); // reload playlist with fresh indices
+      router.refresh();
+      reload();
     } catch (e) {
       toast.error(`Remove failed: ${e instanceof Error ? e.message : e}`);
     }
@@ -419,12 +382,9 @@ export function SongsTable({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
-      toast.success(
-        `Moved ${data.moved} to trash${data.failed ? `, ${data.failed} failed` : ""}`,
-      );
+      toast.success(`Moved ${data.moved} to trash${data.failed ? `, ${data.failed} failed` : ""}`);
       const removed = new Set(items.map((s) => s.id));
       setSongs((prev) => prev.filter((s) => !removed.has(s.id)));
-      setTotal((t) => Math.max(0, t - data.moved));
       setSelected(new Set());
       setDeleteOpen(false);
       router.refresh();
@@ -437,8 +397,6 @@ export function SongsTable({
 
   const allSelected = songs.length > 0 && selected.size === songs.length;
   const someSelected = selected.size > 0 && !allSelected;
-  const visibleCols = COLUMNS.filter((c) => show(c.id));
-  const colSpan = visibleCols.length + 3;
   const selectedSongs = songs.filter((s) => selected.has(s.id));
 
   function cellContent(col: Col, s: Song) {
@@ -468,8 +426,60 @@ export function SongsTable({
     }
   }
 
+  function renderRow(s: Song, index: number, offset: number) {
+    const isSel = selected.has(s.id);
+    const on = stars[s.id] ?? s.starred;
+    return (
+      <div
+        key={`${s.id}-${index}`}
+        data-selected={isSel}
+        className="group absolute inset-x-0 top-0 grid items-center border-b border-border/50 text-sm hover:bg-muted/40 data-[selected=true]:bg-primary/10"
+        style={{ gridTemplateColumns, height: ROW_HEIGHT, transform: `translateY(${offset}px)` }}
+      >
+        <div className="pl-6">
+          <Checkbox checked={isSel} onCheckedChange={() => selectRow(index)} aria-label="Select row" />
+        </div>
+        <div className="flex justify-center">
+          <Cover coverArt={s.coverArt} />
+        </div>
+        {visibleCols.map((col) => (
+          <div key={col.id} className={cn("min-w-0 px-3", col.align === "right" && "text-right")}>
+            {TEXT_COLS.has(col.id) ? (
+              <div className="truncate" title={textOf(col, s)}>
+                {cellContent(col, s)}
+              </div>
+            ) : (
+              cellContent(col, s)
+            )}
+          </div>
+        ))}
+        <div className="flex items-center justify-end gap-2 pr-6">
+          <button aria-label={on ? "Unfavorite" : "Favorite"} onClick={() => toggleHeart(s)}>
+            <Heart
+              className={cn(
+                "size-4 transition-colors",
+                on ? "fill-primary text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            />
+          </button>
+          {playlistId && s.playlistIndex != null && (
+            <button
+              aria-label="Remove from playlist"
+              title="Remove from playlist"
+              onClick={() => removeFromPlaylist([s.playlistIndex!])}
+              className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex h-full flex-col">
+      {/* Toolbar */}
       <div className="flex items-center gap-3 border-b border-border px-6 py-3">
         <div className="relative w-full max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -509,10 +519,7 @@ export function SongsTable({
               ))}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup
-              value={String(pageSize)}
-              onValueChange={(v) => setPageSize(Number(v))}
-            >
+            <DropdownMenuRadioGroup value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
               <DropdownMenuLabel>Rows per page</DropdownMenuLabel>
               {PAGE_SIZES.map((n) => (
                 <DropdownMenuRadioItem key={n} value={String(n)}>
@@ -534,157 +541,77 @@ export function SongsTable({
         </div>
       </div>
 
+      {/* Header — kept outside the scroll area so virtualizer offsets stay simple */}
       <div
-        ref={scrollRef}
-        onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 600)}
-        className="flex-1 overflow-auto"
+        className="grid items-center border-b border-border bg-background text-xs"
+        style={{ gridTemplateColumns, height: 41 }}
       >
-        <table className="w-full border-separate border-spacing-0 text-sm">
-          <thead className="sticky top-0 z-10 bg-background">
-            <tr>
-              <th className="border-b border-border px-3 py-2 pl-6" style={{ width: 48 }}>
-                <Checkbox
-                  checked={allSelected}
-                  indeterminate={someSelected}
-                  onCheckedChange={() =>
-                    setSelected(allSelected ? new Set() : new Set(songs.map((s) => s.id)))
-                  }
-                  aria-label="Select all loaded"
-                />
-              </th>
-              <th className="border-b border-border px-2 py-2" style={{ width: 52 }} />
-              {visibleCols.map((col) => {
-                const active = col.sortKey !== null && sort === col.sortKey;
-                return (
-                  <th
-                    key={col.id}
-                    style={{ width: col.width }}
-                    className="border-b border-border px-3 py-2 text-left"
-                  >
-                    {col.sortKey === null || unplayedOnly ? (
-                      <span
-                        className={cn(
-                          "text-xs font-medium text-muted-foreground",
-                          col.align === "right" && "block text-right",
-                        )}
-                      >
-                        {col.label}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => toggleSort(col.sortKey!)}
-                        className={cn(
-                          "flex items-center gap-1 text-xs font-medium hover:text-foreground",
-                          active ? "text-foreground" : "text-muted-foreground",
-                          col.align === "right" && "ml-auto justify-end",
-                        )}
-                      >
-                        {col.label}
-                        {active &&
-                          (order === "ASC" ? (
-                            <ArrowUp className="size-3" />
-                          ) : (
-                            <ArrowDown className="size-3" />
-                          ))}
-                      </button>
+          <div className="pl-6">
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              onCheckedChange={() =>
+                setSelected(allSelected ? new Set() : new Set(songs.map((s) => s.id)))
+              }
+              aria-label="Select all loaded"
+            />
+          </div>
+          <div />
+          {visibleCols.map((col) => {
+            const active = col.sortKey !== null && sort === col.sortKey;
+            return (
+              <div key={col.id} className={cn("min-w-0 px-3", col.align === "right" && "flex justify-end")}>
+                {col.sortKey === null || unplayedOnly ? (
+                  <span className="font-medium text-muted-foreground">{col.label}</span>
+                ) : (
+                  <button
+                    onClick={() => toggleSort(col.sortKey!)}
+                    className={cn(
+                      "flex items-center gap-1 font-medium hover:text-foreground",
+                      active ? "text-foreground" : "text-muted-foreground",
                     )}
-                  </th>
-                );
-              })}
-              <th className="border-b border-border px-3 py-2 pr-6" style={{ width: 96 }} />
-            </tr>
-          </thead>
-          <tbody>
-            {songs.map((s, index) => {
-              const isSel = selected.has(s.id);
-              const on = stars[s.id] ?? s.starred;
-              return (
-                <tr
-                  key={`${s.id}-${index}`}
-                  data-selected={isSel}
-                  className="group hover:bg-muted/40 data-[selected=true]:bg-primary/10"
-                >
-                  <td className="border-b border-border/50 px-3 py-2 pl-6">
-                    <Checkbox
-                      checked={isSel}
-                      onCheckedChange={() => selectRow(index)}
-                      aria-label="Select row"
-                    />
-                  </td>
-                  <td className="border-b border-border/50 px-2 py-1.5">
-                    <Cover coverArt={s.coverArt} />
-                  </td>
-                  {visibleCols.map((col) => (
-                    <td
-                      key={col.id}
-                      className={cn(
-                        "border-b border-border/50 px-3 py-2",
-                        col.align === "right" && "text-right",
-                        // Title cell is greedy + shrinkable so long names truncate.
-                        col.id === "title" && "w-full max-w-0",
-                      )}
-                    >
-                      {TEXT_COLS.has(col.id) ? (
-                        <div
-                          className={cn(
-                            "truncate",
-                            col.id === "artist" && "max-w-44",
-                            col.id === "album" && "max-w-52",
-                          )}
-                          title={textOf(col, s)}
-                        >
-                          {cellContent(col, s)}
-                        </div>
+                  >
+                    {col.label}
+                    {active &&
+                      (order === "ASC" ? (
+                        <ArrowUp className="size-3" />
                       ) : (
-                        cellContent(col, s)
-                      )}
-                    </td>
-                  ))}
-                  <td className="border-b border-border/50 px-3 py-2 pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        aria-label={on ? "Unfavorite" : "Favorite"}
-                        onClick={() => toggleHeart(s)}
-                      >
-                        <Heart
-                          className={cn(
-                            "size-4 transition-colors",
-                            on
-                              ? "fill-primary text-primary"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
-                        />
-                      </button>
-                      {playlistId && s.playlistIndex != null && (
-                        <button
-                          aria-label="Remove from playlist"
-                          title="Remove from playlist"
-                          onClick={() => removeFromPlaylist([s.playlistIndex!])}
-                          className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                        >
-                          <X className="size-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            <tr ref={sentinelRef}>
-              <td colSpan={colSpan} className="px-6 py-4 text-center text-sm text-muted-foreground">
-                {loading
-                  ? "Loading…"
-                  : reachedEnd
-                    ? songs.length === 0
-                      ? "No songs match."
-                      : "End of list."
-                    : ""}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                        <ArrowDown className="size-3" />
+                      ))}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <div />
+        </div>
 
+        {/* Scroll area — virtualized rows only */}
+        <div
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            setShowTop(el.scrollTop > 600);
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 400) loadMore();
+          }}
+          className="flex-1 overflow-auto"
+        >
+          <div className="relative" style={{ height: rowVirtualizer.getTotalSize() }}>
+            {virtualItems.map((vi) => renderRow(songs[vi.index], vi.index, vi.start))}
+          </div>
+
+          <div className="px-6 py-4 text-center text-sm text-muted-foreground">
+            {loading
+              ? "Loading…"
+              : reachedEnd
+                ? songs.length === 0
+                  ? "No songs match."
+                  : "End of list."
+                : ""}
+          </div>
+        </div>
+
+      {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
           <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-lg">

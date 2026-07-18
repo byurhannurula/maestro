@@ -1,4 +1,5 @@
 import { getLibrarySongs, getLibraryPlaylists } from "@/lib/library";
+import { env } from "@/lib/env";
 import { nowMs } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";
 import { SourceBanner } from "@/components/source-banner";
@@ -15,7 +16,13 @@ export default async function AllSongsPage({
   const playlistId = playlist || undefined;
 
   const [initial, playlistsRes] = await Promise.all([
-    getLibrarySongs({ start: 0, end: 25, sort: "createdAt", order: "DESC", playlistId }),
+    getLibrarySongs({
+      start: 0,
+      end: env.DEFAULT_PAGE_SIZE,
+      sort: "createdAt",
+      order: "DESC",
+      playlistId,
+    }),
     getLibraryPlaylists(),
   ]);
 
@@ -47,6 +54,7 @@ export default async function AllSongsPage({
           playlistId={playlistId}
           defaultSort="createdAt"
           defaultOrder="DESC"
+          defaultPageSize={env.DEFAULT_PAGE_SIZE}
         />
       </div>
     </div>

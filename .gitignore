@@ -225,6 +225,9 @@ next-env.d.ts
 *.sqlite-wal
 *.sqlite-journal
 
+# Playwright MCP output
+.playwright-mcp/
+
 ### homelab stack runtime data — never commit ###
 /music
 /navidrome

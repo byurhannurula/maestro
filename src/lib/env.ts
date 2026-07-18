@@ -33,6 +33,10 @@ const schema = z.object({
   IMPORT_DELAY_MS: z.coerce.number().int().nonnegative().default(1500),
   IMPORT_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
+  // --- UI ---
+  // Default rows per page / initial fetch size (user can override in the UI).
+  DEFAULT_PAGE_SIZE: z.coerce.number().int().positive().default(25),
+
   // --- Webhook ingest (Shazam / iOS Shortcut) ---
   WEBHOOK_SECRET: z.string().default(""),
   WEBHOOK_PLAYLIST: z.string().default("Shazam"),
