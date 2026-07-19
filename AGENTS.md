@@ -73,6 +73,30 @@ src/
 - **Style:** pnpm (48h supply-chain cooldown), no emojis in code/commits, Prettier (printWidth 100).
   Server components first; push `"use client"` to leaves.
 
+## DRY / KISS — reuse the shared helpers, keep units small
+
+Before writing a fetch, a route guard, or a small utility, check for an existing helper —
+most boilerplate is already extracted. Don't re-roll these:
+
+- **API routes** (`lib/route.ts`): wrap **every** handler in `withSession(handler)` (session
+  gate + error→500). Use `jsonError(msg, status)`, `readJson<T>(req)`, `requireNavidrome()`.
+  Never re-copy the `requireSession` two-liner or a hand-rolled `{error}` JSON response.
+- **Server API clients** (ListenBrainz / Deezer / Last.fm / new ones): use `getJson`/`postJson`
+  from `lib/http.ts` (owns `no-store` + `accept: json` + `!res.ok → throw`); `trimSlash` for
+  base URLs. (Subsonic/native/deemix keep bespoke request logic — leave them.)
+- **Client fetches**: use `apiJson<T>(url, init?)` from `hooks/use-api.ts` (throws with the
+  server's `{error}`); pair with `errMsg(e)` from `lib/utils.ts` in the `toast.error` catch.
+- **Shared pure utils**: `errMsg` (utils), `mapLimit` (concurrency), `trackKey` (dedupe — the
+  one true `artist␟title` key; never rebuild it inline), `coverGradient` (deterministic gradient).
+- **Hooks** (`src/hooks/`): `usePersistent`, `useViewportWidth`, `useToggleSet`,
+  `useInfiniteSongs`. New reusable stateful logic goes here, not inline in a component.
+
+**Keep components small.** If a component passes ~300 lines or owns several unrelated concerns,
+split it: sub-components to their own files, stateful logic into a `src/hooks/` hook, pure helpers
+into `src/lib/`. `complexity`/`cognitive-complexity` eslint warnings mark the current oversized
+files (songs-table, import-view, discovery-view, player-provider, library.ts) — treat them as
+split targets, not as rules to silence.
+
 ## Do not commit
 
 Stack runtime data (`/music`, `/trash`, `/navidrome`, `/deemix`, `/config`, `maestro-data`), `.env*`,
