@@ -398,24 +398,27 @@ export function SongsTable({
   }
 
   async function confirmDelete() {
-    const items = songs.filter((s) => selected.has(s.id));
-    const paths = items.map((s) => s.path).filter((p): p is string => !!p);
-    if (paths.length === 0) {
-      toast.error("Selected tracks have no file paths");
-      return;
-    }
+    const ids = [...selected];
+    if (ids.length === 0) return;
     setDeleting(true);
     try {
+      // Delete by id: the server resolves the real physical path from the Native
+      // API (the Subsonic path shown for playlist/search rows is tag-derived).
       const res = await fetch("/api/delete", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ paths }),
+        body: JSON.stringify({ ids }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
       toast.success(`Moved ${data.moved} to trash${data.failed ? `, ${data.failed} failed` : ""}`);
-      const removed = new Set(items.map((s) => s.id));
-      setSongs((prev) => prev.filter((s) => !removed.has(s.id)));
+      // Drop only the rows the server actually moved — leave failed ones visible.
+      const okIds = new Set<string>(
+        (data.results as Array<{ id?: string; ok?: boolean }> | undefined)
+          ?.filter((r) => r.ok && r.id)
+          .map((r) => r.id as string) ?? [],
+      );
+      setSongs((prev) => prev.filter((s) => !okIds.has(s.id)));
       setSelected(new Set());
       setDeleteOpen(false);
       router.refresh();
@@ -732,10 +735,10 @@ export function SongsTable({
               permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 font-mono text-xs">
+          <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 text-xs">
             {selectedSongs.map((s) => (
-              <div key={s.id} className="truncate py-0.5" title={s.path}>
-                {s.path ?? <span className="text-red-400">no path — {s.title}</span>}
+              <div key={s.id} className="truncate py-0.5" title={`${s.artist} — ${s.title}`}>
+                {s.artist} — {s.title}
               </div>
             ))}
           </div>

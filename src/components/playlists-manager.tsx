@@ -42,14 +42,15 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
         const scoped = await fetch(
           `/api/songs?playlist=${encodeURIComponent(pl.id)}&start=0&end=2000`,
         ).then((r) => r.json());
-        const paths: string[] = (scoped.songs ?? [])
-          .map((s: { path?: string }) => s.path)
-          .filter((p: string | undefined): p is string => !!p);
-        if (paths.length > 0) {
+        const ids: string[] = (scoped.songs ?? [])
+          .map((s: { id?: string }) => s.id)
+          .filter((x: string | undefined): x is string => !!x);
+        if (ids.length > 0) {
+          // Delete by id so the server resolves the real physical path.
           const del = await fetch("/api/delete", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ paths }),
+            body: JSON.stringify({ ids }),
           });
           trashed = (await del.json().catch(() => ({})))?.moved ?? 0;
         }

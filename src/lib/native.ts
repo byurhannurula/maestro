@@ -128,3 +128,30 @@ export function getSongs(
 ): Promise<{ songs: Song[]; total: number }> {
   return cached(`songs:${JSON.stringify(opts)}`, ["songs"], () => getSongsRaw(opts));
 }
+
+/**
+ * Resolve song IDs to their REAL physical paths via the Native API. The Subsonic
+ * API returns a tag-derived path (AlbumArtist/Album/Track) that does NOT match
+ * the file on disk, so any filesystem op (delete) must resolve the path here.
+ * Not cached — only called right before a mutation.
+ */
+export async function getSongPaths(
+  ids: string[],
+): Promise<Array<{ id: string; path: string | null }>> {
+  const token = await login();
+  return Promise.all(
+    ids.map(async (id) => {
+      try {
+        const res = await fetch(`${env.NAVIDROME_URL}/api/song/${encodeURIComponent(id)}`, {
+          headers: { "x-nd-authorization": `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!res.ok) return { id, path: null };
+        const s = (await res.json()) as RawSong;
+        return { id, path: s.path ?? null };
+      } catch {
+        return { id, path: null };
+      }
+    }),
+  );
+}

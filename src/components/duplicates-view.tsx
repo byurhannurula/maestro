@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, Crown, Loader2, Trash2 } from "lucide-react";
-import type { DuplicatesResult, Song } from "@/lib/types";
+import type { DuplicateGroup, DuplicatesResult, Song } from "@/lib/types";
 import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,24 @@ function quality(s: Song): string {
   if (s.bitRate) parts.push(`${s.bitRate} kbps`);
   if (s.sizeBytes) parts.push(formatBytes(s.sizeBytes));
   return parts.join(" · ") || "—";
+}
+
+/** Drop trashed tracks from the groups, recomputing keeper/reclaimable, and
+ *  discard any cluster that no longer has ≥2 copies. */
+function pruneGroups(groups: DuplicateGroup[], removedIds: Set<string>): DuplicateGroup[] {
+  const out: DuplicateGroup[] = [];
+  for (const g of groups) {
+    const members = g.members.filter((m) => !removedIds.has(m.id));
+    if (members.length < 2) continue; // no longer a duplicate
+    const durs = members.map((m) => m.durationSecs);
+    out.push({
+      ...g,
+      members,
+      versionsDiffer: Math.max(...durs) - Math.min(...durs) > 3,
+      reclaimableBytes: members.slice(1).reduce((n, m) => n + (m.sizeBytes ?? 0), 0),
+    });
+  }
+  return out;
 }
 
 export function DuplicatesView({ now }: { now: number }) {
@@ -82,24 +100,39 @@ export function DuplicatesView({ now }: { now: number }) {
   }
 
   async function confirmDelete() {
-    const paths = selectedSongs.map((s) => s.path).filter((p): p is string => !!p);
-    if (paths.length === 0) {
-      toast.error("Selected tracks have no file paths");
-      return;
-    }
+    const ids = selectedSongs.map((s) => s.id);
+    if (ids.length === 0) return;
     setDeleting(true);
     try {
       const res = await fetch("/api/delete", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ paths }),
+        body: JSON.stringify({ ids }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`);
       toast.success(`Moved ${body.moved} to trash${body.failed ? `, ${body.failed} failed` : ""}`);
       setConfirmOpen(false);
+
+      // Remove only the copies the server confirmed it moved, from local state.
+      // Navidrome's purge-rescan is async, so re-querying now would race it and
+      // the rows would linger; prune optimistically instead.
+      const removedIds = new Set<string>(
+        (body.results as Array<{ id?: string; ok?: boolean }> | undefined)
+          ?.filter((r) => r.ok && r.id)
+          .map((r) => r.id as string) ?? [],
+      );
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              groups: pruneGroups(prev.groups, removedIds),
+              duplicateTracks: prev.duplicateTracks - removedIds.size,
+            }
+          : prev,
+      );
+      setSelected(new Set());
       router.refresh();
-      await load(match); // re-scan so cleared groups disappear
     } catch (e) {
       toast.error(`Delete failed: ${e instanceof Error ? e.message : e}`);
     } finally {

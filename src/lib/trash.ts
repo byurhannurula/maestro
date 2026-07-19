@@ -55,6 +55,12 @@ export async function moveToTrash(relPaths: string[]): Promise<MoveResult[]> {
       results.push({ path: rel, ok: false, error: "invalid path" });
       continue;
     }
+    if (!(await exists(src))) {
+      // Not under this music root — likely a second Navidrome library that
+      // isn't mounted here. Report honestly instead of a misleading success.
+      results.push({ path: rel, ok: false, error: "file not found under MUSIC_DIR" });
+      continue;
+    }
     try {
       const destRel = relative(env.MUSIC_DIR, src);
       const dest = await uniqueDest(join(env.TRASH_DIR, destRel));
