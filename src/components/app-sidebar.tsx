@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ import {
 const NAV = [
   { href: "/", label: "All Songs", icon: ListMusic, exact: true },
   { href: "/playlists", label: "Playlists", icon: ListVideo, exact: false },
+  { href: "/discovery", label: "Discovery", icon: Sparkles, exact: false },
   { href: "/cleanup", label: "Cleanup", icon: Trash2, exact: false },
   { href: "/import", label: "Import", icon: Download, exact: false },
 ] as const;
