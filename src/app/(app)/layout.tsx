@@ -1,7 +1,9 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { ShortcutsProvider } from "@/components/shortcuts";
+import { SidebarProvider } from "@/components/sidebar-provider";
 import { getLibraryPlaylists } from "@/lib/navidrome/library";
 import { auth } from "@/lib/auth";
 
@@ -18,12 +20,17 @@ export default async function AppLayout({ children }: Readonly<{ children: React
 
   const { playlists } = await getLibraryPlaylists();
   const displayName = session.user.name || session.user.email;
+  const collapsed = (await cookies()).get("sidebar_collapsed")?.value === "1";
 
   return (
-    <div className="flex h-full">
-      <AppSidebar playlists={playlists} username={displayName} />
-      <main className="flex-1 overflow-hidden">{children}</main>
-      <KeyboardShortcuts />
-    </div>
+    <ShortcutsProvider>
+      <SidebarProvider defaultCollapsed={collapsed}>
+        <div className="flex h-full">
+          <AppSidebar playlists={playlists} username={displayName} />
+          <main className="flex-1 overflow-hidden">{children}</main>
+          <KeyboardShortcuts />
+        </div>
+      </SidebarProvider>
+    </ShortcutsProvider>
   );
 }

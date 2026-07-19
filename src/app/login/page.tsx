@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { isPocketIdConfigured } from "@/lib/env";
 import { LoginForm } from "@/components/login-form";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function LoginPage({
   searchParams,
@@ -16,7 +17,10 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="flex h-full items-center justify-center p-6">
+    <div className="relative flex h-full items-center justify-center p-6">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <LoginForm pocketIdEnabled={isPocketIdConfigured} next={safeNext(next)} />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -23,6 +23,7 @@ import type { Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
 import { cn } from "@/lib/utils";
+import { ScrollingText } from "@/components/scrolling-text";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -108,6 +109,29 @@ function textOf(col: Col, s: Song): string {
   if (col.id === "artist") return s.artist;
   if (col.id === "album") return s.album;
   return "";
+}
+
+// Progressive column hiding by viewport width — narrower screens shed the
+// least-essential columns first (title always stays). Applied on top of the
+// user's manual View toggles.
+const RESPONSIVE_HIDE: { maxWidth: number; col: ColId }[] = [
+  { maxWidth: 1280, col: "album" },
+  { maxWidth: 1120, col: "added" },
+  { maxWidth: 960, col: "lastPlayed" },
+  { maxWidth: 760, col: "playCount" },
+  { maxWidth: 520, col: "artist" },
+];
+
+/** Current viewport width, or null before mount (assume desktop during SSR). */
+function useViewportWidth(): number | null {
+  const [w, setW] = useState<number | null>(null);
+  useEffect(() => {
+    const on = () => setW(window.innerWidth);
+    on();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return w;
 }
 
 /** State backed by localStorage, so UI prefs survive reloads. */
@@ -217,7 +241,18 @@ export function SongsTable({
   const shiftDown = useRef(false);
   const lastIndex = useRef<number | null>(null);
 
-  const show = (id: ColId) => !hiddenCols.includes(id);
+  // Columns forced off by the current viewport width (independent of the user's
+  // View menu, which still reflects their explicit preference).
+  const vw = useViewportWidth();
+  const autoHidden = useMemo(() => {
+    const h = new Set<ColId>();
+    if (vw == null) return h; // SSR / first paint: render the full desktop layout
+    for (const r of RESPONSIVE_HIDE) if (vw < r.maxWidth) h.add(r.col);
+    return h;
+  }, [vw]);
+
+  const userShows = (id: ColId) => !hiddenCols.includes(id);
+  const show = (id: ColId) => userShows(id) && !autoHidden.has(id);
   const visibleCols = COLUMNS.filter((c) => show(c.id));
   // checkbox + cover + data columns + actions.
   const gridTemplateColumns = ["44px", "48px", ...visibleCols.map((c) => GRID[c.id]), "88px"].join(
@@ -486,9 +521,12 @@ export function SongsTable({
         {visibleCols.map((col) => (
           <div key={col.id} className={cn("min-w-0 px-3", col.align === "right" && "text-right")}>
             {TEXT_COLS.has(col.id) ? (
-              <div className="truncate" title={textOf(col, s)}>
-                {cellContent(col, s)}
-              </div>
+              <ScrollingText
+                text={textOf(col, s)}
+                textClassName={
+                  col.id === "title" ? "font-medium text-foreground" : "text-muted-foreground"
+                }
+              />
             ) : (
               cellContent(col, s)
             )}
@@ -521,8 +559,8 @@ export function SongsTable({
   return (
     <div className="relative flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 border-b border-border px-6 py-3">
-        <div className="relative w-full max-w-sm">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3 sm:gap-3 sm:px-6">
+        <div className="relative min-w-0 flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchInput}
@@ -574,7 +612,7 @@ export function SongsTable({
               {COLUMNS.filter((c) => TOGGLEABLE.includes(c.id)).map((c) => (
                 <DropdownMenuCheckboxItem
                   key={c.id}
-                  checked={show(c.id)}
+                  checked={userShows(c.id)}
                   onCheckedChange={() => toggleColumn(c.id)}
                 >
                   {c.label}
@@ -686,14 +724,21 @@ export function SongsTable({
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-lg">
-            <span className="px-2 text-sm font-medium tabular-nums">{selected.size} selected</span>
-            <div className="mx-1 h-5 w-px bg-border" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-3">
+          <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-border bg-card px-2 py-2 shadow-lg sm:gap-2 sm:px-3">
+            <span className="whitespace-nowrap px-1 text-sm font-medium tabular-nums sm:px-2">
+              {selected.size}
+              <span className="hidden sm:inline"> selected</span>
+            </span>
+            <div className="mx-0.5 h-5 w-px bg-border sm:mx-1" />
 
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm hover:bg-accent hover:text-accent-foreground">
-                <ListPlus className="size-4" /> Add to playlist
+              <DropdownMenuTrigger
+                aria-label="Add to playlist"
+                className="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-md px-2.5 text-sm hover:bg-accent hover:text-accent-foreground sm:px-3"
+              >
+                <ListPlus className="size-4" />{" "}
+                <span className="hidden sm:inline">Add to playlist</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="top"
@@ -715,25 +760,45 @@ export function SongsTable({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button size="sm" variant="ghost" onClick={bulkFavorite}>
-              <Heart className="size-4" /> Favourite
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={bulkFavorite}
+              aria-label="Favourite"
+              className="whitespace-nowrap"
+            >
+              <Heart className="size-4" /> <span className="hidden sm:inline">Favourite</span>
             </Button>
             {playlistId && (
-              <Button size="sm" variant="ghost" onClick={bulkRemoveFromPlaylist}>
-                <ListX className="size-4" /> Remove from playlist
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={bulkRemoveFromPlaylist}
+                aria-label="Remove from playlist"
+                className="whitespace-nowrap"
+              >
+                <ListX className="size-4" />{" "}
+                <span className="hidden sm:inline">Remove from playlist</span>
               </Button>
             )}
             <Button
               size="sm"
               variant="ghost"
-              className="text-destructive hover:text-destructive"
+              aria-label="Delete"
+              className="whitespace-nowrap text-destructive hover:text-destructive"
               onClick={() => setDeleteOpen(true)}
             >
-              <Trash2 className="size-4" /> Delete
+              <Trash2 className="size-4" /> <span className="hidden sm:inline">Delete</span>
             </Button>
-            <div className="mx-1 h-5 w-px bg-border" />
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-              Clear
+            <div className="mx-0.5 h-5 w-px bg-border sm:mx-1" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(new Set())}
+              aria-label="Clear selection"
+            >
+              <X className="size-4 sm:hidden" />
+              <span className="hidden sm:inline">Clear</span>
             </Button>
           </div>
         </div>
