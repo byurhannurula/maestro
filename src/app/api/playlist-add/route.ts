@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireSession } from "@/lib/auth";
 import { addSongsToPlaylist } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
 import { bust } from "@/lib/cache";
@@ -6,6 +7,9 @@ import { bust } from "@/lib/cache";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   if (!isNavidromeConfigured) {
     return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
   }

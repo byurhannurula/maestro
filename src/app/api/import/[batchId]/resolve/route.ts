@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireSession } from "@/lib/auth";
 import { getBatch, save } from "@/lib/import-store";
 import { addSongsToPlaylist } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
@@ -15,6 +16,9 @@ export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ batchId: string }> },
 ) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   if (!isNavidromeConfigured) {
     return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
   }

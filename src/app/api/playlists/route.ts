@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { headers } from "next/headers";
+import { requireSession } from "@/lib/auth";
 import { getLibraryPlaylists } from "@/lib/library";
 import { createPlaylist, deletePlaylist } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
@@ -7,10 +9,16 @@ import { bust } from "@/lib/cache";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const gate = await requireSession(await headers());
+  if (gate.response) return gate.response;
+
   return NextResponse.json(await getLibraryPlaylists());
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   if (!isNavidromeConfigured) {
     return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
   }
@@ -24,6 +32,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   if (!isNavidromeConfigured) {
     return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
   }

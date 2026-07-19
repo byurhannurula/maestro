@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireSession } from "@/lib/auth";
 import { moveToTrash } from "@/lib/trash";
 import { startScan } from "@/lib/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
  * Navidrome rescan so the now-missing rows are purged.
  */
 export async function POST(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   const body = (await req.json().catch(() => ({}))) as { paths?: unknown };
   const paths = Array.isArray(body.paths)
     ? body.paths.filter((p): p is string => typeof p === "string" && p.length > 0)

@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { requireSession } from "@/lib/auth";
 import { isNavidromeConfigured } from "@/lib/env";
 import { coverArtUrl } from "@/lib/subsonic";
 
@@ -9,6 +10,9 @@ export const dynamic = "force-dynamic";
  * GET /api/cover?id=<coverArtId>&size=80
  */
 export async function GET(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   const id = req.nextUrl.searchParams.get("id");
   const size = Number(req.nextUrl.searchParams.get("size")) || 80;
   if (!id || !isNavidromeConfigured) {

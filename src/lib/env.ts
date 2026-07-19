@@ -22,7 +22,29 @@ const schema = z.object({
   TRASH_DIR: z.string().default("/trash"),
 
   // --- App state ---
-  DATABASE_PATH: z.string().default("/data/maestro.db"),
+  // Also the SQLite file backing better-auth (users / sessions / accounts).
+  // Container deployments set this to /data/maestro.db (see docker-compose);
+  // the relative default keeps `pnpm dev` working without a writable /data.
+  DATABASE_PATH: z.string().default("./data/maestro.db"),
+
+  // --- Auth (better-auth) ---
+  // Secret used to sign sessions/tokens. Generate with `openssl rand -hex 32`.
+  BETTER_AUTH_SECRET: z.string().default(""),
+  // Public origin the app is served from, e.g. https://maestro.example.com.
+  // Used for OAuth callbacks and cookie scoping.
+  BETTER_AUTH_URL: z.string().default("http://localhost:4544"),
+
+  // Seed admin (break-glass email/password login). Created once on first boot
+  // if it doesn't already exist. Leave blank to skip seeding.
+  ADMIN_EMAIL: z.string().default(""),
+  ADMIN_PASSWORD: z.string().default(""),
+  ADMIN_NAME: z.string().default("Admin"),
+
+  // --- OIDC via PocketID (generic OAuth) ---
+  // Base URL of the PocketID instance; discovery document is derived from it.
+  POCKETID_ISSUER_URL: z.string().default(""),
+  POCKETID_CLIENT_ID: z.string().default(""),
+  POCKETID_CLIENT_SECRET: z.string().default(""),
 
   // --- Caching ---
   // How long Navidrome reads are cached (seconds). Busted immediately on any
@@ -69,3 +91,13 @@ export const isNavidromeConfigured =
 
 /** True when a deemix endpoint is configured. */
 export const isDeemixConfigured = env.DEEMIX_URL.length > 0;
+
+/** True when PocketID (OIDC) credentials are present. */
+export const isPocketIdConfigured =
+  env.POCKETID_ISSUER_URL.length > 0 &&
+  env.POCKETID_CLIENT_ID.length > 0 &&
+  env.POCKETID_CLIENT_SECRET.length > 0;
+
+/** True when a seed admin should be provisioned on boot. */
+export const hasSeedAdmin =
+  env.ADMIN_EMAIL.length > 0 && env.ADMIN_PASSWORD.length > 0;

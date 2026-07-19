@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireSession } from "@/lib/auth";
 import { getLibrarySongs } from "@/lib/library";
 import type { SongSortKey } from "@/lib/types";
 
@@ -15,6 +16,9 @@ const SORT_KEYS: SongSortKey[] = [
 const MAX_PAGE = 500;
 
 export async function GET(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   const sp = req.nextUrl.searchParams;
 
   const start = Math.max(0, Number(sp.get("start")) || 0);

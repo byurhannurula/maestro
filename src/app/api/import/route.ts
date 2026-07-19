@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { headers } from "next/headers";
+import { requireSession } from "@/lib/auth";
 import { parseImportList } from "@/lib/parse-import";
 import { createBatch, listBatches } from "@/lib/import-store";
 import { runBatch } from "@/lib/import-worker";
@@ -7,10 +9,16 @@ import { isNavidromeConfigured } from "@/lib/env";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const gate = await requireSession(await headers());
+  if (gate.response) return gate.response;
+
   return NextResponse.json({ batches: listBatches() });
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
   if (!isNavidromeConfigured) {
     return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
   }

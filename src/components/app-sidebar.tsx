@@ -9,6 +9,7 @@ import {
   ListMusic,
   ListVideo,
   Loader2,
+  LogOut,
   Plus,
   RefreshCw,
   Settings,
@@ -16,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 import type { Playlist } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +57,11 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  async function signOut() {
+    await authClient.signOut();
+    window.location.assign("/login");
+  }
 
   async function createPlaylist() {
     const name = window.prompt("New playlist name")?.trim();
@@ -145,6 +152,10 @@ export function AppSidebar({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.refresh()}>
                 <RefreshCw className="size-4" /> Reload library
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="size-4" /> Sign out
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
