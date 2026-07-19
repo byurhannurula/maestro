@@ -233,6 +233,8 @@ export function SongsTable({
   const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ["album"]);
   const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", defaultPageSize);
   const [staleDays, setStaleDays] = usePersistent<number>("maestro.staleDays", defaultStaleDays);
+  // Fold artist (and album) under the title in one column, Spotify/Explo-style.
+  const [combineArtist, setCombineArtist] = usePersistent<boolean>("maestro.combineArtist", false);
 
   const { songs, setSongs, total, source, loading, reachedEnd, loadMore, reload } =
     useInfiniteSongs(initial, {
@@ -269,12 +271,21 @@ export function SongsTable({
   }, [vw]);
 
   const userShows = (id: ColId) => !hiddenCols.includes(id);
-  const show = (id: ColId) => userShows(id) && !autoHidden.has(id);
+  const show = (id: ColId) =>
+    userShows(id) && !autoHidden.has(id) && !(combineArtist && id === "artist");
   const visibleCols = COLUMNS.filter((c) => show(c.id));
   // checkbox + cover + data columns + actions.
   const gridTemplateColumns = ["44px", "48px", ...visibleCols.map((c) => GRID[c.id]), "88px"].join(
     " ",
   );
+
+  // Fold artist under the title when the Artist column is dropped by the combine
+  // toggle or a narrow viewport (never when the user hid it deliberately). Album
+  // rides along in the same subline when it too is auto-dropped.
+  const artistInline = combineArtist || autoHidden.has("artist");
+  const albumInSub = combineArtist || autoHidden.has("album");
+  const rowHeight = artistInline ? 62 : ROW_HEIGHT;
+  const subText = (s: Song) => (albumInSub && s.album ? `${s.artist} — ${s.album}` : s.artist);
 
   // Debounce the search box.
   useEffect(() => {
@@ -309,10 +320,15 @@ export function SongsTable({
   const rowVirtualizer = useVirtualizer({
     count: songs.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 8,
   });
   const virtualItems = rowVirtualizer.getVirtualItems();
+
+  // Re-measure when the row height changes (combine toggled / breakpoint crossed).
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [rowHeight, rowVirtualizer]);
 
   // (No auto-fill on mount — the initial page is exactly DEFAULT_PAGE_SIZE.
   // Further pages load only when the user scrolls near the bottom; see onScroll.)
@@ -523,7 +539,7 @@ export function SongsTable({
         key={`${s.id}-${index}`}
         data-selected={isSel}
         className="group absolute inset-x-0 top-0 grid items-center border-b border-border/50 text-sm hover:bg-muted/40 data-[selected=true]:bg-primary/10"
-        style={{ gridTemplateColumns, height: ROW_HEIGHT, transform: `translateY(${offset}px)` }}
+        style={{ gridTemplateColumns, height: rowHeight, transform: `translateY(${offset}px)` }}
       >
         <div className="pl-6">
           <Checkbox
@@ -535,20 +551,27 @@ export function SongsTable({
         <div className="flex justify-center">
           <Cover coverArt={s.coverArt} />
         </div>
-        {visibleCols.map((col) => (
-          <div key={col.id} className={cn("min-w-0 px-3", col.align === "right" && "text-right")}>
-            {TEXT_COLS.has(col.id) ? (
-              <ScrollingText
-                text={textOf(col, s)}
-                textClassName={
-                  col.id === "title" ? "font-medium text-foreground" : "text-muted-foreground"
-                }
-              />
-            ) : (
-              cellContent(col, s)
-            )}
-          </div>
-        ))}
+        {visibleCols.map((col) =>
+          col.id === "title" && artistInline ? (
+            <div key="title" className="min-w-0 px-3">
+              <ScrollingText text={s.title} textClassName="font-medium text-foreground" />
+              <div className="truncate text-xs text-muted-foreground">{subText(s)}</div>
+            </div>
+          ) : (
+            <div key={col.id} className={cn("min-w-0 px-3", col.align === "right" && "text-right")}>
+              {TEXT_COLS.has(col.id) ? (
+                <ScrollingText
+                  text={textOf(col, s)}
+                  textClassName={
+                    col.id === "title" ? "font-medium text-foreground" : "text-muted-foreground"
+                  }
+                />
+              ) : (
+                cellContent(col, s)
+              )}
+            </div>
+          ),
+        )}
         <div className="flex items-center justify-end gap-2 pr-6">
           <button aria-label={on ? "Unfavorite" : "Favorite"} onClick={() => toggleHeart(s)}>
             <Heart
@@ -636,11 +659,22 @@ export function SongsTable({
                 <DropdownMenuCheckboxItem
                   key={c.id}
                   checked={userShows(c.id)}
+                  disabled={c.id === "artist" && combineArtist}
                   onCheckedChange={() => toggleColumn(c.id)}
                 >
                   {c.label}
                 </DropdownMenuCheckboxItem>
               ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Layout</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem
+                checked={combineArtist}
+                onCheckedChange={() => setCombineArtist((v) => !v)}
+              >
+                Combine artist
+              </DropdownMenuCheckboxItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuRadioGroup

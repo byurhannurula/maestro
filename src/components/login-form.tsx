@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
-import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -45,15 +44,7 @@ export function LoginForm({ pocketIdEnabled, next }: { pocketIdEnabled: boolean;
   }
 
   return (
-    <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div className="mb-6 flex flex-col items-center gap-3 text-center">
-        <Logo size={56} />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Maestro</h1>
-          <p className="text-sm text-muted-foreground">Sign in to continue</p>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-4">
       {pocketIdEnabled && (
         <>
           <Button
@@ -67,7 +58,7 @@ export function LoginForm({ pocketIdEnabled, next }: { pocketIdEnabled: boolean;
             {pending === "pocketid" && <Loader2 className="size-4 animate-spin" />}
             Continue with PocketID
           </Button>
-          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
             or
             <span className="h-px flex-1 bg-border" />
@@ -76,32 +67,30 @@ export function LoginForm({ pocketIdEnabled, next }: { pocketIdEnabled: boolean;
       )}
 
       <form onSubmit={onEmailSubmit} className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email
-          </label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="username"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-sm font-medium">
-            Password
-          </label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+        <label htmlFor="email" className="sr-only">
+          Email
+        </label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="Email"
+          autoComplete="username"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <label htmlFor="password" className="sr-only">
+          Password
+        </label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="Password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
         {error && (
           <p role="alert" className="text-sm text-destructive">

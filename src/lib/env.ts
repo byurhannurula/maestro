@@ -92,6 +92,9 @@ export const isNavidromeConfigured =
 /** True when a deemix endpoint is configured. */
 export const isDeemixConfigured = env.DEEMIX_URL.length > 0;
 
+/** True when the machine-to-machine import webhook is enabled (secret set). */
+export const isWebhookEnabled = env.WEBHOOK_SECRET.length > 0;
+
 /** True when PocketID (OIDC) credentials are present. */
 export const isPocketIdConfigured =
   env.POCKETID_ISSUER_URL.length > 0 &&
