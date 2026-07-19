@@ -60,4 +60,7 @@ export interface SongQuery {
   favoritesOnly?: boolean;
   /** Cleanup: only never-played tracks (playCount 0). */
   unplayedOnly?: boolean;
+  /** Cleanup age cutoff (days): hide never-played tracks added more recently
+   *  than this, so fresh imports aren't flagged as dead weight. 0/undefined = off. */
+  staleDays?: number;
 }

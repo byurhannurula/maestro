@@ -6,6 +6,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown,
   ArrowUp,
+  CalendarClock,
   Heart,
   ListPlus,
   ListX,
@@ -50,6 +51,19 @@ import {
 
 const PAGE_SIZES = [25, 50, 100, 200, 500];
 const ROW_HEIGHT = 53;
+
+// Cleanup "dead weight" age cutoffs: hide never-played tracks added more
+// recently than this, so fresh imports aren't mistaken for junk.
+const STALE_OPTIONS: { days: number; label: string }[] = [
+  { days: 0, label: "Any age" },
+  { days: 7, label: "Over 7 days" },
+  { days: 30, label: "Over 30 days" },
+  { days: 90, label: "Over 90 days" },
+  { days: 180, label: "Over 6 months" },
+  { days: 365, label: "Over 1 year" },
+];
+const staleLabel = (days: number) =>
+  STALE_OPTIONS.find((o) => o.days === days)?.label ?? `Over ${days} days`;
 
 type ColId = "title" | "artist" | "album" | "playCount" | "added" | "lastPlayed" | "duration";
 
@@ -150,6 +164,7 @@ export function SongsTable({
   defaultSort = "title",
   defaultOrder = "ASC",
   defaultPageSize = 25,
+  defaultStaleDays = 30,
   playlistId,
   unplayedOnly = false,
 }: {
@@ -159,6 +174,7 @@ export function SongsTable({
   defaultSort?: SongSortKey;
   defaultOrder?: "ASC" | "DESC";
   defaultPageSize?: number;
+  defaultStaleDays?: number;
   playlistId?: string;
   unplayedOnly?: boolean;
 }) {
@@ -172,6 +188,7 @@ export function SongsTable({
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ["album"]);
   const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", defaultPageSize);
+  const [staleDays, setStaleDays] = usePersistent<number>("maestro.staleDays", defaultStaleDays);
 
   const { songs, setSongs, total, source, loading, reachedEnd, loadMore, reload } =
     useInfiniteSongs(initial, {
@@ -181,6 +198,7 @@ export function SongsTable({
       playlistId,
       favoritesOnly,
       unplayedOnly,
+      staleDays,
       pageSize,
     });
 
@@ -189,6 +207,8 @@ export function SongsTable({
   const [stars, setStars] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [removeState, setRemoveState] = useState<{ indices: number[]; count: number } | null>(null);
+  const [removing, setRemoving] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const shiftDown = useRef(false);
@@ -211,7 +231,7 @@ export function SongsTable({
   useEffect(() => {
     setSelected(new Set());
     lastIndex.current = null;
-  }, [sort, order, search, playlistId, favoritesOnly, unplayedOnly, pageSize]);
+  }, [sort, order, search, playlistId, favoritesOnly, unplayedOnly, staleDays, pageSize]);
 
   // Track Shift for range selection.
   useEffect(() => {
@@ -363,7 +383,18 @@ export function SongsTable({
       .filter((s) => selected.has(s.id))
       .map((s) => s.playlistIndex)
       .filter((n): n is number => n != null);
-    void removeFromPlaylist(indices);
+    if (indices.length > 0) setRemoveState({ indices, count: indices.length });
+  }
+
+  async function confirmRemove() {
+    if (!removeState) return;
+    setRemoving(true);
+    try {
+      await removeFromPlaylist(removeState.indices);
+      setRemoveState(null);
+    } finally {
+      setRemoving(false);
+    }
   }
 
   async function confirmDelete() {
@@ -466,7 +497,7 @@ export function SongsTable({
             <button
               aria-label="Remove from playlist"
               title="Remove from playlist"
-              onClick={() => removeFromPlaylist([s.playlistIndex!])}
+              onClick={() => setRemoveState({ indices: [s.playlistIndex!], count: 1 })}
               className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
             >
               <X className="size-4" />
@@ -499,6 +530,28 @@ export function SongsTable({
           <Heart className={cn("size-4", favoritesOnly && "fill-current")} />
           Favourites
         </Button>
+
+        {unplayedOnly && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+              <CalendarClock className="size-4" />
+              {staleLabel(staleDays)}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuRadioGroup
+                value={String(staleDays)}
+                onValueChange={(v) => setStaleDays(Number(v))}
+              >
+                <DropdownMenuLabel>Added before</DropdownMenuLabel>
+                {STALE_OPTIONS.map((o) => (
+                  <DropdownMenuRadioItem key={o.days} value={String(o.days)}>
+                    {o.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
@@ -697,6 +750,34 @@ export function SongsTable({
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {deleting ? "Moving…" : "Move to trash"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!removeState} onOpenChange={(o) => !o && setRemoveState(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remove {removeState?.count ?? 0} track{removeState?.count === 1 ? "" : "s"} from this
+              playlist?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The track{removeState?.count === 1 ? "" : "s"} stay in your library and the files
+              aren&apos;t touched — only the playlist entry is removed. You can add them back
+              anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmRemove();
+              }}
+              disabled={removing}
+            >
+              {removing ? "Removing…" : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

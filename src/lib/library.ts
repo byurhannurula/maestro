@@ -20,37 +20,21 @@ export async function getLibrarySongs(q: SongQuery): Promise<SongsResult> {
   const search = q.search?.trim();
 
   if (!isNavidromeConfigured) {
-    const pool = q.unplayedOnly ? sampleSongs.filter((s) => s.playCount === 0) : sampleSongs;
+    let pool = q.unplayedOnly ? sampleSongs.filter((s) => s.playCount === 0) : sampleSongs;
+    if (q.unplayedOnly) pool = applyStaleCutoff(pool, q.staleDays);
     return { ...processInMemory(pool, q, search), source: "sample" };
   }
 
   try {
     // Cleanup: never-played tracks. The play_count *filter* is unreliable
     // (unplayed rows store NULL, not 0), but sorting by playCount ASC puts all
-    // zeros contiguously at the top — so fetch sorted and stop at the boundary.
+    // zeros contiguously at the top. This block is small (~hundreds of rows), so
+    // fetch it whole and return an exact list — no fragile boundary paging, and
+    // the age cutoff can be applied cleanly without desyncing offsets.
     if (q.unplayedOnly) {
-      const pageSize = q.end - q.start;
-      const { songs } = await getSongs({
-        start: q.start,
-        end: q.end,
-        sort: "playCount",
-        order: "ASC",
-        search,
-        starred: q.favoritesOnly,
-      });
-      const zeros: typeof songs = [];
-      let boundary = false;
-      for (const s of songs) {
-        if (s.playCount === 0) zeros.push(s);
-        else {
-          boundary = true;
-          break;
-        }
-      }
-      const done = boundary || songs.length < pageSize;
-      // total drives the client's stop condition: exact when done, "+more" while not.
-      const total = done ? q.start + zeros.length : q.start + pageSize + 1;
-      return { songs: zeros, total, source: "navidrome" };
+      const zeros = await fetchNeverPlayed(search, q.favoritesOnly);
+      const songs = applyStaleCutoff(zeros, q.staleDays);
+      return { songs, total: songs.length, source: "navidrome" };
     }
 
     // Scoped to a playlist: playlists are small, so fetch whole then process.
@@ -86,6 +70,47 @@ export async function getLibrarySongs(q: SongQuery): Promise<SongsResult> {
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/**
+ * Fetch the whole never-played block (playCount 0). Pages through the Native API
+ * sorted by playCount ASC and stops at the first played track. Bounded by a cap
+ * so a misbehaving sort can't loop forever.
+ */
+async function fetchNeverPlayed(search?: string, favoritesOnly?: boolean): Promise<Song[]> {
+  const PAGE = 500;
+  const CAP = 20_000;
+  const zeros: Song[] = [];
+  let offset = 0;
+  while (offset < CAP) {
+    const { songs } = await getSongs({
+      start: offset,
+      end: offset + PAGE,
+      sort: "playCount",
+      order: "ASC",
+      search,
+      starred: favoritesOnly,
+    });
+    let boundary = false;
+    for (const s of songs) {
+      if (s.playCount === 0) zeros.push(s);
+      else {
+        boundary = true;
+        break;
+      }
+    }
+    if (boundary || songs.length < PAGE) break;
+    offset += songs.length;
+  }
+  return zeros;
+}
+
+/** Drop never-played tracks that were added more recently than `days` ago. */
+function applyStaleCutoff(songs: Song[], days?: number): Song[] {
+  if (!days || days <= 0) return songs;
+  const cutoff = Date.now() - days * 86_400_000;
+  // Unknown createdAt → treat as old (keep); Navidrome always sets it in practice.
+  return songs.filter((s) => !s.createdAt || Date.parse(s.createdAt) <= cutoff);
 }
 
 /** Apply search + favourites filter + sort + pagination to an in-memory list. */

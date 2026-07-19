@@ -11,6 +11,8 @@ export interface SongQueryParams {
   playlistId?: string;
   favoritesOnly: boolean;
   unplayedOnly: boolean;
+  /** Cleanup age cutoff in days (only applied when unplayedOnly). */
+  staleDays: number;
   pageSize: number;
 }
 
@@ -32,7 +34,8 @@ export function useInfiniteSongs(initial: SongsResult, params: SongQueryParams) 
   const firstRun = useRef(true);
   const inFlight = useRef(false);
 
-  const { sort, order, search, playlistId, favoritesOnly, unplayedOnly, pageSize } = params;
+  const { sort, order, search, playlistId, favoritesOnly, unplayedOnly, staleDays, pageSize } =
+    params;
 
   const fetchPage = useCallback(
     async (reset: boolean) => {
@@ -50,7 +53,10 @@ export function useInfiniteSongs(initial: SongsResult, params: SongQueryParams) 
       if (term) qp.set("search", term);
       if (playlistId) qp.set("playlist", playlistId);
       if (favoritesOnly) qp.set("favorites", "1");
-      if (unplayedOnly) qp.set("unplayed", "1");
+      if (unplayedOnly) {
+        qp.set("unplayed", "1");
+        if (staleDays > 0) qp.set("staleDays", String(staleDays));
+      }
 
       setLoading(true);
       try {
@@ -83,7 +89,7 @@ export function useInfiniteSongs(initial: SongsResult, params: SongQueryParams) 
         inFlight.current = false;
       }
     },
-    [sort, order, search, playlistId, favoritesOnly, unplayedOnly, pageSize],
+    [sort, order, search, playlistId, favoritesOnly, unplayedOnly, staleDays, pageSize],
   );
 
   // Re-query from the top whenever the query changes (skip the initial mount).

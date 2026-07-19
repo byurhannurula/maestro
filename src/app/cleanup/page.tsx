@@ -16,6 +16,7 @@ export default async function CleanupPage() {
       sort: "playCount",
       order: "ASC",
       unplayedOnly: true,
+      staleDays: env.CLEANUP_MIN_AGE_DAYS,
     }),
     getLibraryPlaylists(),
   ]);
@@ -26,7 +27,7 @@ export default async function CleanupPage() {
       <div className="shrink-0">
         <PageHeader
           title="Cleanup"
-          subtitle="Only tracks you've never played — the dead weight. Select and delete; files move to ./trash, nothing is destroyed."
+          subtitle="Tracks you've never played and didn't just add — the dead weight. Tune the age cutoff to exclude fresh imports. Files move to ./trash, nothing is destroyed."
         />
         <SourceBanner source={initial.source} error={initial.error} />
       </div>
@@ -38,6 +39,7 @@ export default async function CleanupPage() {
           defaultSort="playCount"
           defaultOrder="ASC"
           defaultPageSize={env.DEFAULT_PAGE_SIZE}
+          defaultStaleDays={env.CLEANUP_MIN_AGE_DAYS}
           unplayedOnly
         />
       </div>

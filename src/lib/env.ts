@@ -37,6 +37,11 @@ const schema = z.object({
   // Default rows per page / initial fetch size (user can override in the UI).
   DEFAULT_PAGE_SIZE: z.coerce.number().int().positive().default(25),
 
+  // Cleanup default age cutoff (days). Never-played tracks added more recently
+  // than this are treated as fresh imports and hidden from Cleanup, so the list
+  // shows genuine dead weight rather than things you just downloaded. 0 = off.
+  CLEANUP_MIN_AGE_DAYS: z.coerce.number().int().nonnegative().default(30),
+
   // --- Webhook ingest (Shazam / iOS Shortcut) ---
   WEBHOOK_SECRET: z.string().default(""),
   WEBHOOK_PLAYLIST: z.string().default("Shazam"),
