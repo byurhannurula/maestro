@@ -1,7 +1,6 @@
-import { type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
 import { isNavidromeConfigured } from "@/lib/env";
 import { coverArtUrl } from "@/lib/navidrome/subsonic";
+import { withSession } from "@/lib/route";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +8,7 @@ export const dynamic = "force-dynamic";
  * Proxies Navidrome cover art so the browser never sees Subsonic credentials.
  * GET /api/cover?id=<coverArtId>&size=80
  */
-export async function GET(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
-
+export const GET = withSession(async (req) => {
   const id = req.nextUrl.searchParams.get("id");
   const size = Number(req.nextUrl.searchParams.get("size")) || 80;
   if (!id || !isNavidromeConfigured) {
@@ -31,4 +27,4 @@ export async function GET(req: NextRequest) {
   } catch {
     return new Response(null, { status: 404 });
   }
-}
+});

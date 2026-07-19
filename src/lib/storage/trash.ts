@@ -1,9 +1,9 @@
 import "server-only";
-import type { Dirent } from "node:fs";
 import { access, copyFile, mkdir, readdir, rename, rm, stat, unlink } from "node:fs/promises";
 import { dirname, extname, join, relative } from "node:path";
 import { env } from "@/lib/env";
 import { safeRelPath } from "@/lib/storage/paths";
+import type { Dirent } from "node:fs";
 
 /**
  * Delete = move a track's file out of the Navidrome-scanned tree into ./trash,

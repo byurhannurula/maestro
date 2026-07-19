@@ -1,7 +1,7 @@
-import { getLibraryPlaylists } from "@/lib/navidrome/library";
 import { PageHeader } from "@/components/page-header";
-import { SourceBanner } from "@/components/source-banner";
 import { PlaylistsManager } from "@/components/playlists-manager";
+import { SourceBanner } from "@/components/source-banner";
+import { getLibraryPlaylists } from "@/lib/navidrome/library";
 
 export const dynamic = "force-dynamic";
 

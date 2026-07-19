@@ -87,3 +87,51 @@ export interface SongQuery {
    *  than this, so fresh imports aren't flagged as dead weight. 0/undefined = off. */
   staleDays?: number;
 }
+
+/** A recommendation playlist surfaced on Discovery (from ListenBrainz). */
+export interface DiscoveryPlaylist {
+  /** ListenBrainz playlist MBID (fetch its tracks by this). Empty when unavailable. */
+  mbid: string;
+  /** Short category, e.g. "Weekly Exploration" / "Weekly Jams" / "Daily Jams". */
+  kind: string;
+  /** Full ListenBrainz title (tooltip). */
+  title: string;
+  /** Friendly one-liner shown on the card. */
+  subtitle: string;
+  /** False = a canonical slot ListenBrainz hasn't generated for this user (greyed). */
+  available: boolean;
+}
+
+/** A single Discovery track, enriched with a Deezer preview + library match. */
+export interface DiscoveryTrack {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  durationSecs?: number;
+  /** 30-second preview MP3 (Deezer); absent when unavailable. */
+  preview?: string;
+  /** Cover art URL (Deezer). */
+  cover?: string;
+  deezerUrl?: string;
+  /** Found on Deezer → downloadable via deemix. */
+  available: boolean;
+  /** Already in the Navidrome library. */
+  inLibrary: boolean;
+  /** 0–1 similarity (Last.fm recommendations only). */
+  match?: number;
+  /** Why it surfaced, e.g. "Similar to Mutemath" (Last.fm only). */
+  reason?: string;
+}
+
+/** A similar-artist suggestion (Last.fm), seeded from an artist you play. */
+export interface DiscoveryArtist {
+  id: string;
+  name: string;
+  /** Seed artist this was derived from. */
+  basedOn: string;
+  /** 0–1 similarity. */
+  match: number;
+  /** Already have tracks by this artist. */
+  inLibrary: boolean;
+}

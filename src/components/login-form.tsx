@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { authClient } from "@/lib/auth/auth-client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth/auth-client";
 
 export function LoginForm({ pocketIdEnabled, next }: { pocketIdEnabled: boolean; next: string }) {
   const [email, setEmail] = useState("");

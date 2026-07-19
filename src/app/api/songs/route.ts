@@ -1,6 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { getLibrarySongs } from "@/lib/navidrome/library";
+import { withSession } from "@/lib/route";
 import type { SongSortKey } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +15,7 @@ const SORT_KEYS: SongSortKey[] = [
 ];
 const MAX_PAGE = 500;
 
-export async function GET(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
-
+export const GET = withSession(async (req) => {
   const sp = req.nextUrl.searchParams;
 
   const start = Math.max(0, Number(sp.get("start")) || 0);
@@ -47,4 +44,4 @@ export async function GET(req: NextRequest) {
     staleDays,
   });
   return NextResponse.json(result);
-}
+});

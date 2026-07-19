@@ -1,31 +1,23 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { removeFromPlaylist } from "@/lib/navidrome/subsonic";
-import { isNavidromeConfigured } from "@/lib/env";
+import { withSession, requireNavidrome, readJson, jsonError } from "@/lib/route";
 import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
+export const POST = withSession(async (req) => {
+  const bad = requireNavidrome();
+  if (bad) return bad;
 
-  if (!isNavidromeConfigured) {
-    return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
-  }
-  const body = (await req.json().catch(() => ({}))) as {
-    playlistId?: unknown;
-    indices?: unknown;
-  };
+  const body = await readJson<{ playlistId: unknown; indices: unknown }>(req);
   const playlistId = typeof body.playlistId === "string" ? body.playlistId : "";
   const indices = Array.isArray(body.indices)
     ? body.indices.filter((n): n is number => typeof n === "number" && Number.isInteger(n))
     : [];
-  if (!playlistId) return NextResponse.json({ error: "playlistId required" }, { status: 400 });
-  if (indices.length === 0)
-    return NextResponse.json({ error: "indices required" }, { status: 400 });
+  if (!playlistId) return jsonError("playlistId required");
+  if (indices.length === 0) return jsonError("indices required");
 
   await removeFromPlaylist(playlistId, indices);
   bust("playlists");
   return NextResponse.json({ ok: true, count: indices.length });
-}
+});

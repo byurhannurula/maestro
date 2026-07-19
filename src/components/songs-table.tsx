@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown,
@@ -12,22 +10,32 @@ import {
   ListX,
   Loader2,
   Music,
+  Pause,
+  Play,
   Plus,
   Search,
   SlidersHorizontal,
   Trash2,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
-import { formatDuration, relativeTime } from "@/lib/format";
-import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
-import { cn } from "@/lib/utils";
+import { usePlayer, type PlayerTrack } from "@/components/player-provider";
 import { ScrollingText } from "@/components/scrolling-text";
 import { useShortcut, useShortcutHint } from "@/components/shortcuts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -40,16 +48,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
+import { usePersistent } from "@/hooks/use-persistent";
+import { useViewportWidth } from "@/hooks/use-viewport-width";
+import { formatDuration, relativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
 
 const PAGE_SIZES = [25, 50, 100, 200, 500];
 const ROW_HEIGHT = 53;
@@ -123,54 +128,37 @@ const RESPONSIVE_HIDE: { maxWidth: number; col: ColId }[] = [
   { maxWidth: 520, col: "artist" },
 ];
 
-/** Current viewport width, or null before mount (assume desktop during SSR). */
-function useViewportWidth(): number | null {
-  const [w, setW] = useState<number | null>(null);
-  useEffect(() => {
-    const on = () => setW(window.innerWidth);
-    on();
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return w;
+/** Map a library Song to a queue entry that streams from Navidrome. */
+function toPlayerTrack(s: Song, starred?: boolean): PlayerTrack {
+  return {
+    id: s.id,
+    title: s.title,
+    artist: s.artist,
+    src: `/api/stream?id=${encodeURIComponent(s.id)}`,
+    coverArt: s.coverArt,
+    starred: starred ?? s.starred,
+    source: "library",
+  };
 }
 
-/** State backed by localStorage, so UI prefs survive reloads. */
-function usePersistent<T>(key: string, initial: T): [T, (v: T | ((p: T) => T)) => void] {
-  const [state, setState] = useState<T>(initial);
-  const loaded = useRef(false);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (raw != null) setState(JSON.parse(raw) as T);
-    } catch {
-      /* ignore */
-    }
-    loaded.current = true;
-  }, [key]);
-  useEffect(() => {
-    if (!loaded.current) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      /* ignore */
-    }
-  }, [key, state]);
-  return [state, setState];
-}
-
-function Cover({ coverArt, size = 36 }: { coverArt?: string; size?: number }) {
+/** Cover art that doubles as a play/pause button, streaming the song from Navidrome. */
+function Cover({ song, queue, size = 44 }: { song: Song; queue: PlayerTrack[]; size?: number }) {
   const [failed, setFailed] = useState(false);
+  const player = usePlayer();
+  const active = player.isCurrent(song.id);
+  const playing = active && player.playing;
+
   return (
-    <div
-      className="shrink-0 overflow-hidden rounded bg-muted"
+    <button
+      onClick={() => player.toggle(toPlayerTrack(song), queue)}
+      aria-label={playing ? `Pause ${song.title}` : `Play ${song.title}`}
+      className="group/cover relative shrink-0 overflow-hidden rounded bg-muted"
       style={{ width: size, height: size }}
     >
-      {coverArt && !failed ? (
+      {song.coverArt && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={`/api/cover?id=${encodeURIComponent(coverArt)}&size=${size * 2}`}
+          src={`/api/cover?id=${encodeURIComponent(song.coverArt)}&size=${size * 2}`}
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
@@ -181,7 +169,19 @@ function Cover({ coverArt, size = 36 }: { coverArt?: string; size?: number }) {
           <Music className="size-4 text-muted-foreground" />
         </div>
       )}
-    </div>
+      <span
+        className={cn(
+          "absolute inset-0 flex items-center justify-center bg-black/45 transition-opacity",
+          playing ? "opacity-100" : "opacity-0 group-hover/cover:opacity-100",
+        )}
+      >
+        {playing ? (
+          <Pause className="size-4 fill-white text-white" />
+        ) : (
+          <Play className="size-4 fill-white text-white" />
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -230,11 +230,15 @@ export function SongsTable({
       searchRef.current?.select();
     },
   });
-  const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ["album"]);
+  const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols.v2", []);
   const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", defaultPageSize);
   const [staleDays, setStaleDays] = usePersistent<number>("maestro.staleDays", defaultStaleDays);
-  // Fold artist (and album) under the title in one column, Spotify/Explo-style.
-  const [combineArtist, setCombineArtist] = usePersistent<boolean>("maestro.combineArtist", false);
+  // Fold artist under the title in one column, Spotify/Explo-style (album keeps
+  // its own column). Default on.
+  const [combineArtist, setCombineArtist] = usePersistent<boolean>(
+    "maestro.combineArtist.v2",
+    true,
+  );
 
   const { songs, setSongs, total, source, loading, reachedEnd, loadMore, reload } =
     useInfiniteSongs(initial, {
@@ -275,17 +279,24 @@ export function SongsTable({
     userShows(id) && !autoHidden.has(id) && !(combineArtist && id === "artist");
   const visibleCols = COLUMNS.filter((c) => show(c.id));
   // checkbox + cover + data columns + actions.
-  const gridTemplateColumns = ["44px", "48px", ...visibleCols.map((c) => GRID[c.id]), "88px"].join(
+  const gridTemplateColumns = ["44px", "56px", ...visibleCols.map((c) => GRID[c.id]), "88px"].join(
     " ",
   );
 
   // Fold artist under the title when the Artist column is dropped by the combine
   // toggle or a narrow viewport (never when the user hid it deliberately). Album
-  // rides along in the same subline when it too is auto-dropped.
+  // keeps its own column, only riding along in the subline when the viewport
+  // auto-drops it.
   const artistInline = combineArtist || autoHidden.has("artist");
-  const albumInSub = combineArtist || autoHidden.has("album");
+  const albumInSub = autoHidden.has("album");
   const rowHeight = artistInline ? 62 : ROW_HEIGHT;
   const subText = (s: Song) => (albumInSub && s.album ? `${s.artist} — ${s.album}` : s.artist);
+
+  // The whole loaded list becomes the player queue (prev/next + autoplay walk it).
+  const playerQueue = useMemo(
+    () => songs.map((s) => toPlayerTrack(s, stars[s.id] ?? s.starred)),
+    [songs, stars],
+  );
 
   // Debounce the search box.
   useEffect(() => {
@@ -549,7 +560,7 @@ export function SongsTable({
           />
         </div>
         <div className="flex justify-center">
-          <Cover coverArt={s.coverArt} />
+          <Cover song={s} queue={playerQueue} />
         </div>
         {visibleCols.map((col) =>
           col.id === "title" && artistInline ? (

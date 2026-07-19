@@ -2,10 +2,11 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { PlayerProvider } from "@/components/player-provider";
 import { ShortcutsProvider } from "@/components/shortcuts";
 import { SidebarProvider } from "@/components/sidebar-provider";
-import { getLibraryPlaylists } from "@/lib/navidrome/library";
 import { auth } from "@/lib/auth";
+import { getLibraryPlaylists } from "@/lib/navidrome/library";
 
 /**
  * Authenticated app shell. This is the real auth gate: `proxy.ts` only does an
@@ -25,11 +26,13 @@ export default async function AppLayout({ children }: Readonly<{ children: React
   return (
     <ShortcutsProvider>
       <SidebarProvider defaultCollapsed={collapsed}>
-        <div className="flex h-full">
-          <AppSidebar playlists={playlists} username={displayName} />
-          <main className="flex-1 overflow-hidden">{children}</main>
-          <KeyboardShortcuts />
-        </div>
+        <PlayerProvider>
+          <div className="flex h-full">
+            <AppSidebar playlists={playlists} username={displayName} />
+            <main className="flex-1 overflow-hidden">{children}</main>
+            <KeyboardShortcuts />
+          </div>
+        </PlayerProvider>
       </SidebarProvider>
     </ShortcutsProvider>
   );

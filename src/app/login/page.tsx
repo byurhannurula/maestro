@@ -2,11 +2,11 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { isPocketIdConfigured } from "@/lib/env";
 import { LoginForm } from "@/components/login-form";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { auth } from "@/lib/auth";
+import { isPocketIdConfigured } from "@/lib/env";
 
 // Re-render per request so the background photo is re-picked on every reload.
 export const dynamic = "force-dynamic";

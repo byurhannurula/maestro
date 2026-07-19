@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   ChevronDown,
@@ -8,26 +7,17 @@ import {
   Download,
   Link2,
   Loader2,
+  Pause,
+  Play,
   RotateCcw,
   Search,
   Trash2,
   Upload,
   XCircle,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { parseImportList, type ParsedLine } from "@/lib/import/parse";
-import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import/store";
-import type { Playlist } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { usePlayer } from "@/components/player-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +28,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { parseImportList, type ParsedLine } from "@/lib/import/parse";
+import { cn } from "@/lib/utils";
+import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import/store";
+import type { Playlist } from "@/lib/types";
 
 const ACTIVE: JobStatus[] = ["queued", "searching", "downloading", "scanning", "matching"];
 const FAILED: JobStatus[] = ["not_found", "download_failed", "add_failed"];
@@ -709,53 +712,78 @@ function JobList({
   onResolve: (batchId: string, jobId: string, action: "pick" | "skip", songId?: string) => void;
   onRetryRow: (line: string) => void;
 }) {
+  const player = usePlayer();
   const jobs = only ? batch.jobs.filter(only) : batch.jobs;
   return (
     <table className="w-full text-sm">
       <tbody>
-        {jobs.map((job) => (
-          <tr key={job.id} className="border-b border-border/40 align-top last:border-0">
-            <td className="px-4 py-2">
-              <div className="font-medium">{job.title ?? job.line}</div>
-              <div className="text-xs text-muted-foreground">{job.artist}</div>
-              {job.error && <div className="text-xs text-red-400/80">{job.error}</div>}
-              {job.status === "needs_review" && job.candidates && job.candidates.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {job.candidates.map((cand) => (
+        {jobs.map((job) => {
+          const preview = job.deezer?.preview;
+          const playing = player.isCurrent(job.id) && player.playing;
+          return (
+            <tr key={job.id} className="border-b border-border/40 align-top last:border-0">
+              <td className="px-4 py-2">
+                <div className="flex items-center gap-2">
+                  {preview && (
                     <button
-                      key={cand.id}
-                      onClick={() => onResolve(batch.id, job.id, "pick", cand.id)}
-                      className="rounded-md border border-border px-2 py-1 text-xs hover:border-primary hover:bg-primary/10"
+                      onClick={() =>
+                        player.toggle({
+                          id: job.id,
+                          title: job.title ?? job.line,
+                          artist: job.artist,
+                          src: `/api/preview?url=${encodeURIComponent(preview)}`,
+                          coverUrl: job.deezer?.cover,
+                          source: "preview",
+                        })
+                      }
+                      aria-label={playing ? "Pause preview" : "Play preview"}
+                      className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      {cand.title} — <span className="text-muted-foreground">{cand.artist}</span>
+                      {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
                     </button>
-                  ))}
-                  <button
-                    onClick={() => onResolve(batch.id, job.id, "skip")}
-                    className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    skip
-                  </button>
+                  )}
+                  <span className="font-medium">{job.title ?? job.line}</span>
                 </div>
-              )}
-            </td>
-            <td className="whitespace-nowrap px-4 py-2 text-right">
-              <div className="flex items-center justify-end gap-2">
-                <JobStatusLabel job={job} />
-                {isFailed(job) && (
-                  <button
-                    onClick={() => onRetryRow(job.line)}
-                    title="Retry this track"
-                    aria-label="Retry this track"
-                    className="text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    <RotateCcw className="size-3.5" />
-                  </button>
+                <div className="text-xs text-muted-foreground">{job.artist}</div>
+                {job.error && <div className="text-xs text-red-400/80">{job.error}</div>}
+                {job.status === "needs_review" && job.candidates && job.candidates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {job.candidates.map((cand) => (
+                      <button
+                        key={cand.id}
+                        onClick={() => onResolve(batch.id, job.id, "pick", cand.id)}
+                        className="rounded-md border border-border px-2 py-1 text-xs hover:border-primary hover:bg-primary/10"
+                      >
+                        {cand.title} — <span className="text-muted-foreground">{cand.artist}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => onResolve(batch.id, job.id, "skip")}
+                      className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      skip
+                    </button>
+                  </div>
                 )}
-              </div>
-            </td>
-          </tr>
-        ))}
+              </td>
+              <td className="whitespace-nowrap px-4 py-2 text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <JobStatusLabel job={job} />
+                  {isFailed(job) && (
+                    <button
+                      onClick={() => onRetryRow(job.line)}
+                      title="Retry this track"
+                      aria-label="Retry this track"
+                      className="text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <RotateCcw className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

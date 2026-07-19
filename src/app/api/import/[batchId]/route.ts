@@ -1,26 +1,22 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { getBatch, deleteBatch } from "@/lib/import/store";
+import { withSession, jsonError } from "@/lib/route";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest, ctx: { params: Promise<{ batchId: string }> }) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
+type Ctx = { params: Promise<{ batchId: string }> };
 
+export const GET = withSession<Ctx>(async (_req, ctx) => {
   const { batchId } = await ctx.params;
   const batch = getBatch(batchId);
-  if (!batch) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!batch) return jsonError("not found", 404);
   return NextResponse.json(batch);
-}
+});
 
 /** Remove a single batch from history. */
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ batchId: string }> }) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
-
+export const DELETE = withSession<Ctx>(async (_req, ctx) => {
   const { batchId } = await ctx.params;
   const existed = deleteBatch(batchId);
-  if (!existed) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!existed) return jsonError("not found", 404);
   return NextResponse.json({ ok: true });
-}
+});

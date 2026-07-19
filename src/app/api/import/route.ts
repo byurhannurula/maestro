@@ -1,41 +1,26 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { headers } from "next/headers";
-import { requireSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { parseImportList } from "@/lib/import/parse";
 import { createBatch, listBatches, clearFinishedBatches } from "@/lib/import/store";
 import { runBatch } from "@/lib/import/worker";
-import { isNavidromeConfigured } from "@/lib/env";
+import { withSession, requireNavidrome, readJson, jsonError } from "@/lib/route";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const gate = await requireSession(await headers());
-  if (gate.response) return gate.response;
-
+export const GET = withSession(() => {
   return NextResponse.json({ batches: listBatches() });
-}
+});
 
 /** Clear finished batches from history (running ones are kept). */
-export async function DELETE(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
-
+export const DELETE = withSession(() => {
   const removed = clearFinishedBatches();
   return NextResponse.json({ removed, batches: listBatches() });
-}
+});
 
-export async function POST(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
+export const POST = withSession(async (req) => {
+  const bad = requireNavidrome();
+  if (bad) return bad;
 
-  if (!isNavidromeConfigured) {
-    return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
-  }
-  const body = (await req.json().catch(() => ({}))) as {
-    text?: unknown;
-    playlistId?: unknown;
-    playlistName?: unknown;
-  };
+  const body = await readJson<{ text: unknown; playlistId: unknown; playlistName: unknown }>(req);
   const text = typeof body.text === "string" ? body.text : "";
   const playlistId =
     typeof body.playlistId === "string" && body.playlistId ? body.playlistId : undefined;
@@ -45,9 +30,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
   const parsed = parseImportList(text);
-  if (parsed.length === 0) {
-    return NextResponse.json({ error: "no importable lines" }, { status: 400 });
-  }
+  if (parsed.length === 0) return jsonError("no importable lines");
 
   const batch = createBatch(
     parsed.map((p) => ({
@@ -64,4 +47,4 @@ export async function POST(req: NextRequest) {
   void runBatch(batch);
 
   return NextResponse.json({ batchId: batch.id, jobs: batch.jobs });
-}
+});

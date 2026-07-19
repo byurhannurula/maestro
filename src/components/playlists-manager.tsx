@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { ListVideo, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ListVideo, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import type { Playlist } from "@/lib/types";
-import { formatDuration } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatDuration } from "@/lib/format";
+import type { Playlist } from "@/lib/types";
 
 export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
   const router = useRouter();

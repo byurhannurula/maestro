@@ -1,14 +1,11 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { getDuplicateGroups } from "@/lib/navidrome/library";
+import { withSession } from "@/lib/route";
 
 export const dynamic = "force-dynamic";
 
 /** GET → duplicate clusters. `?match=aggressive` loosens title normalisation. */
-export async function GET(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
-
+export const GET = withSession(async (req) => {
   const aggressive = req.nextUrl.searchParams.get("match") === "aggressive";
   return NextResponse.json(await getDuplicateGroups(aggressive));
-}
+});

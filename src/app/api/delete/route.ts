@@ -1,10 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
-import { moveToTrash, type MoveResult } from "@/lib/storage/trash";
-import { startScan } from "@/lib/navidrome/subsonic";
-import { getSongPaths } from "@/lib/navidrome/native";
+import { NextResponse } from "next/server";
 import { isNavidromeConfigured } from "@/lib/env";
+import { getSongPaths } from "@/lib/navidrome/native";
+import { startScan } from "@/lib/navidrome/subsonic";
+import { withSession, readJson, jsonError } from "@/lib/route";
 import { bust } from "@/lib/storage/cache";
+import { moveToTrash, type MoveResult } from "@/lib/storage/trash";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +16,8 @@ export const dynamic = "force-dynamic";
  * tag-derived and does NOT match the file on disk. Legacy `paths` are still
  * accepted for callers that already hold a Native-sourced path.
  */
-export async function POST(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
-
-  const body = (await req.json().catch(() => ({}))) as { ids?: unknown; paths?: unknown };
+export const POST = withSession(async (req) => {
+  const body = await readJson<{ ids: unknown; paths: unknown }>(req);
   const ids = Array.isArray(body.ids)
     ? body.ids.filter((v): v is string => typeof v === "string" && v.length > 0)
     : [];
@@ -29,7 +26,7 @@ export async function POST(req: NextRequest) {
     : [];
 
   if (ids.length === 0 && rawPaths.length === 0) {
-    return NextResponse.json({ error: "ids or paths required" }, { status: 400 });
+    return jsonError("ids or paths required");
   }
 
   // Resolve ids → real physical paths; keep the id alongside for the response.
@@ -61,4 +58,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ moved, failed: results.length - moved, results });
-}
+});

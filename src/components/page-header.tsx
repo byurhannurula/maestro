@@ -1,3 +1,4 @@
+import { ReloadButton } from "@/components/reload-button";
 import { SidebarTrigger } from "@/components/sidebar-trigger";
 
 export function PageHeader({
@@ -18,7 +19,10 @@ export function PageHeader({
           {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      <div className="flex shrink-0 items-center gap-2">
+        {actions}
+        <ReloadButton />
+      </div>
     </div>
   );
 }

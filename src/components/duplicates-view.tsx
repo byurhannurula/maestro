@@ -1,14 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { AlertTriangle, Crown, Loader2, Trash2 } from "lucide-react";
-import type { DuplicateGroup, DuplicatesResult, Song } from "@/lib/types";
-import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +14,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { DuplicateGroup, DuplicatesResult, Song } from "@/lib/types";
 
 type Match = "conservative" | "aggressive";
 

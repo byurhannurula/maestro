@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import { useShortcutHint } from "@/components/shortcuts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useShortcutHint } from "@/components/shortcuts";
+import { cn } from "@/lib/utils";
 
 const OPTIONS = [
   { value: "light", label: "Light", icon: Sun },

@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Optimistic auth gate (Next 16 "proxy", formerly middleware). This only checks

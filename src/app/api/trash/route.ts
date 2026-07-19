@@ -1,23 +1,16 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { requireSession } from "@/lib/auth";
+import { withSession } from "@/lib/route";
 import { emptyTrash, getTrashInfo } from "@/lib/storage/trash";
 
 export const dynamic = "force-dynamic";
 
 /** GET → current trash size + file count. */
-export async function GET() {
-  const gate = await requireSession(await headers());
-  if (gate.response) return gate.response;
-
+export const GET = withSession(async () => {
   return NextResponse.json(await getTrashInfo());
-}
+});
 
 /** DELETE → permanently empty ./trash; returns bytes/files freed. */
-export async function DELETE() {
-  const gate = await requireSession(await headers());
-  if (gate.response) return gate.response;
-
+export const DELETE = withSession(async () => {
   const freed = await emptyTrash();
   return NextResponse.json({ emptied: true, ...freed });
-}
+});

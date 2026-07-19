@@ -222,6 +222,20 @@ export function coverArtUrl(id: string, size = 80): string {
   return `${env.NAVIDROME_URL}/rest/getCoverArt.view?${params.toString()}`;
 }
 
+/**
+ * Server-side authed stream URL for a song id (proxied by /api/stream, never
+ * sent to the browser). `format=raw` disables Navidrome's on-the-fly transcode
+ * so it streams the original file: that keeps Content-Length + Range support,
+ * which lets the browser start playback almost immediately and seek cleanly
+ * (a transcoded stream has neither, so it buffers before it starts).
+ */
+export function streamUrl(id: string): string {
+  const params = authParams();
+  params.set("id", id);
+  params.set("format", "raw");
+  return `${env.NAVIDROME_URL}/rest/stream.view?${params.toString()}`;
+}
+
 export async function startScan(): Promise<void> {
   await call("startScan.view");
 }

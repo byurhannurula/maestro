@@ -9,7 +9,7 @@ import { env } from "@/lib/env";
  * Errors from the loader propagate uncached (a transient outage never sticks).
  */
 
-type Tag = "songs" | "playlists";
+type Tag = "songs" | "playlists" | "discovery";
 
 interface Entry {
   value: unknown;

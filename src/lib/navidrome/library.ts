@@ -1,11 +1,12 @@
 import "server-only";
 import { cache } from "react";
+import { status as deemixStatus } from "@/lib/deemix";
 import { env, isNavidromeConfigured } from "@/lib/env";
+import { buildDuplicateGroups, normArtist, trackKey } from "@/lib/navidrome/dedupe";
 import { getSongs } from "@/lib/navidrome/native";
 import { ping, getPlaylists, search3Songs, getPlaylistSongs } from "@/lib/navidrome/subsonic";
-import { status as deemixStatus } from "@/lib/deemix";
 import { sampleSongs, samplePlaylists } from "@/lib/sample-data";
-import { buildDuplicateGroups } from "@/lib/navidrome/dedupe";
+import { cached } from "@/lib/storage/cache";
 import type {
   DuplicatesResult,
   Playlist,
@@ -145,6 +146,56 @@ async function fetchAllSongs(): Promise<Song[]> {
     offset += songs.length;
   }
   return out;
+}
+
+/** Normalized `artist␟title` keys for the whole library — lets Discovery flag
+ *  recommendations you already own. Cached under the songs tag. */
+export async function getLibraryKeys(): Promise<Set<string>> {
+  if (!isNavidromeConfigured) return new Set();
+  return cached("library-keys", ["songs"], async () => {
+    const all = await fetchAllSongs();
+    return new Set(all.map((s) => trackKey(s.artist, s.title)));
+  });
+}
+
+/** Most-played artists (falls back to song count when nothing's scrobbled). */
+export async function getTopArtists(n: number): Promise<string[]> {
+  if (!isNavidromeConfigured) return [];
+  return cached(`top-artists:${n}`, ["songs"], async () => {
+    const all = await fetchAllSongs();
+    const plays = new Map<string, number>();
+    const count = new Map<string, number>();
+    for (const s of all) {
+      if (!s.artist) continue;
+      plays.set(s.artist, (plays.get(s.artist) ?? 0) + (s.playCount || 0));
+      count.set(s.artist, (count.get(s.artist) ?? 0) + 1);
+    }
+    return [...plays.keys()]
+      .sort((a, b) => plays.get(b)! - plays.get(a)! || count.get(b)! - count.get(a)!)
+      .slice(0, n);
+  });
+}
+
+/** Most-played tracks (only those actually played). */
+export async function getTopTracks(n: number): Promise<{ artist: string; title: string }[]> {
+  if (!isNavidromeConfigured) return [];
+  return cached(`top-tracks:${n}`, ["songs"], async () => {
+    const all = await fetchAllSongs();
+    return all
+      .filter((s) => (s.playCount || 0) > 0)
+      .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
+      .slice(0, n)
+      .map((s) => ({ artist: s.artist, title: s.title }));
+  });
+}
+
+/** Set of normalized artist keys already in the library. */
+export async function getLibraryArtistKeys(): Promise<Set<string>> {
+  if (!isNavidromeConfigured) return new Set();
+  return cached("library-artists", ["songs"], async () => {
+    const all = await fetchAllSongs();
+    return new Set(all.map((s) => normArtist(s.artist)).filter(Boolean));
+  });
 }
 
 export async function getDuplicateGroups(aggressive: boolean): Promise<DuplicatesResult> {

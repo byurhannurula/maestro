@@ -49,6 +49,12 @@ export function normTitle(t: string, aggressive: boolean): string {
     .replace(/\s+/g, " ");
 }
 
+/** Normalized `artist␟title` identity used for library-match + dedup grouping.
+ *  Single source of truth for the separator + normalisation flags. */
+export function trackKey(artist: string, title: string): string {
+  return `${normArtist(artist)}␟${normTitle(title, false)}`;
+}
+
 /** Suggested keeper first: most-played, then best quality, then oldest. */
 export function keeperCompare(a: Song, b: Song): number {
   return (

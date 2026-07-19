@@ -1,8 +1,5 @@
 "use client";
 
-import { Suspense, useCallback, useState } from "react";
-import Link, { useLinkStatus } from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronsUpDown,
   Download,
@@ -17,15 +14,15 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import Link, { useLinkStatus } from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useState } from "react";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth/auth-client";
-import type { Playlist } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { ScrollingText } from "@/components/scrolling-text";
-import { ThemeMenuSub } from "@/components/theme-toggle";
-import { useSidebar } from "@/components/sidebar-provider";
 import { useShortcut, useShortcutHint } from "@/components/shortcuts";
+import { useSidebar } from "@/components/sidebar-provider";
+import { ThemeMenuSub } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +33,9 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { authClient } from "@/lib/auth/auth-client";
+import { cn } from "@/lib/utils";
+import type { Playlist } from "@/lib/types";
 
 const NAV = [
   { href: "/", label: "All Songs", icon: ListMusic, exact: true },

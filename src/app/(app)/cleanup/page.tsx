@@ -1,11 +1,11 @@
-import { getLibrarySongs, getLibraryPlaylists } from "@/lib/navidrome/library";
-import { env } from "@/lib/env";
-import { nowMs } from "@/lib/format";
-import { PageHeader } from "@/components/page-header";
-import { SourceBanner } from "@/components/source-banner";
-import { SongsTable } from "@/components/songs-table";
 import { CleanupTabs } from "@/components/cleanup-tabs";
 import { DuplicatesView } from "@/components/duplicates-view";
+import { PageHeader } from "@/components/page-header";
+import { SongsTable } from "@/components/songs-table";
+import { SourceBanner } from "@/components/source-banner";
+import { env } from "@/lib/env";
+import { nowMs } from "@/lib/format";
+import { getLibrarySongs, getLibraryPlaylists } from "@/lib/navidrome/library";
 
 export const dynamic = "force-dynamic";
 

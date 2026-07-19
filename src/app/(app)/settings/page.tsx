@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import {
   Download,
   HardDrive,
@@ -8,18 +7,19 @@ import {
   User,
   Webhook,
 } from "lucide-react";
+import { headers } from "next/headers";
+import { EmptyTrashButton } from "@/components/empty-trash-button";
+import { ScanButton } from "@/components/scan-button";
+import { SettingsCard, Field, Stat, type FieldState } from "@/components/settings-ui";
+import { SignOutButton } from "@/components/sign-out-button";
 import { auth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 import { env, isPocketIdConfigured, isWebhookEnabled } from "@/lib/env";
-import { APP_VERSION } from "@/lib/version";
+import { formatBytes, formatDuration, formatUptime } from "@/lib/format";
 import { getLibraryStats, getSystemStatus } from "@/lib/navidrome/library";
 import { getScanStatus, getServerInfo } from "@/lib/navidrome/subsonic";
 import { getTrashInfo } from "@/lib/storage/trash";
-import { formatBytes, formatDuration, formatUptime } from "@/lib/format";
-import { SettingsCard, Field, Stat, type FieldState } from "@/components/settings-ui";
-import { SignOutButton } from "@/components/sign-out-button";
-import { EmptyTrashButton } from "@/components/empty-trash-button";
-import { ScanButton } from "@/components/scan-button";
+import { cn } from "@/lib/utils";
+import { APP_VERSION } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 

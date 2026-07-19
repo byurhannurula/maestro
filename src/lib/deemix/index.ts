@@ -110,6 +110,10 @@ export interface DeezerTrack {
   title: string;
   artist: string;
   link: string;
+  /** 30s preview clip URL, when Deezer provides one (used to audition imports). */
+  preview?: string;
+  /** Album cover URL. */
+  cover?: string;
 }
 
 interface RawSearchResult {
@@ -118,6 +122,8 @@ interface RawSearchResult {
     title: string;
     artist?: { name?: string };
     link?: string;
+    preview?: string;
+    album?: { cover_medium?: string; cover?: string };
   }>;
 }
 
@@ -133,6 +139,8 @@ export async function searchTrack(term: string, limit = 5): Promise<DeezerTrack[
     title: t.title,
     artist: t.artist?.name ?? "",
     link: t.link ?? `https://www.deezer.com/track/${t.id}`,
+    preview: t.preview || undefined,
+    cover: t.album?.cover_medium ?? t.album?.cover ?? undefined,
   }));
 }
 

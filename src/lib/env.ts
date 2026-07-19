@@ -68,6 +68,20 @@ const schema = z.object({
   WEBHOOK_SECRET: z.string().default(""),
   WEBHOOK_PLAYLIST: z.string().default("Shazam"),
 
+  // --- Discovery (recommendations) ---
+  // ListenBrainz is public — only a username is needed (no API key). Its
+  // recommendation playlists (weekly-exploration / weekly-jams / daily-jams)
+  // seed the page. Deezer's public API supplies 30s previews + covers and
+  // confirms a track is downloadable (same catalog deemix pulls from).
+  LISTENBRAINZ_URL: z.string().default("https://api.listenbrainz.org"),
+  LISTENBRAINZ_USER: z.string().default(""),
+  DEEZER_API_URL: z.string().default("https://api.deezer.com"),
+  // Last.fm powers the "recommended tracks / similar artists" sections, seeded
+  // from your most-played artists. Reuse your scrobbling API key (no secret
+  // needed for these read methods).
+  LASTFM_API_URL: z.string().default("https://ws.audioscrobbler.com/2.0/"),
+  LASTFM_API_KEY: z.string().default(""),
+
   // --- Server ---
   PORT: z.coerce.number().int().positive().default(4544),
 });
@@ -94,6 +108,12 @@ export const isDeemixConfigured = env.DEEMIX_URL.length > 0;
 
 /** True when the machine-to-machine import webhook is enabled (secret set). */
 export const isWebhookEnabled = env.WEBHOOK_SECRET.length > 0;
+
+/** True when Discovery can pull recommendations (a ListenBrainz user is set). */
+export const isDiscoveryConfigured = env.LISTENBRAINZ_USER.length > 0;
+
+/** True when the Last.fm sections (recommended tracks / similar artists) work. */
+export const isLastfmConfigured = env.LASTFM_API_KEY.length > 0;
 
 /** True when PocketID (OIDC) credentials are present. */
 export const isPocketIdConfigured =

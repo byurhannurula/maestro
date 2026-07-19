@@ -1,8 +1,8 @@
 "use client";
 
 import { PanelLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/sidebar-provider";
+import { cn } from "@/lib/utils";
 
 /**
  * Re-opens / toggles the sidebar from a page header. Always visible on mobile

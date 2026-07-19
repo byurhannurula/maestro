@@ -1,25 +1,21 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { setStarred } from "@/lib/navidrome/subsonic";
-import { isNavidromeConfigured } from "@/lib/env";
+import { withSession, requireNavidrome, readJson, jsonError } from "@/lib/route";
 import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
-  const gate = await requireSession(req.headers);
-  if (gate.response) return gate.response;
+export const POST = withSession(async (req) => {
+  const bad = requireNavidrome();
+  if (bad) return bad;
 
-  if (!isNavidromeConfigured) {
-    return NextResponse.json({ error: "Navidrome not configured" }, { status: 400 });
-  }
-  const body = (await req.json().catch(() => ({}))) as { ids?: unknown; starred?: unknown };
+  const body = await readJson<{ ids: unknown; starred: unknown }>(req);
   const ids = Array.isArray(body.ids)
     ? body.ids.filter((x): x is string => typeof x === "string")
     : [];
-  if (ids.length === 0) return NextResponse.json({ error: "ids required" }, { status: 400 });
+  if (ids.length === 0) return jsonError("ids required");
 
   await setStarred(ids, Boolean(body.starred));
   bust("songs");
   return NextResponse.json({ ok: true, count: ids.length });
-}
+});
