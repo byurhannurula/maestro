@@ -156,8 +156,8 @@ export function AppSidebar({
             <DropdownMenuGroup>
               <DropdownMenuLabel>Signed in as {username || "admin"}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/system")}>
-                <Settings className="size-4" /> System
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
+                <Settings className="size-4" /> Settings
               </DropdownMenuItem>
               <DropdownMenuItem onClick={reloadLibrary}>
                 <RefreshCw className="size-4" /> Reload library

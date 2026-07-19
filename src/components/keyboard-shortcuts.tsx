@@ -11,7 +11,7 @@ const NAV_KEYS: Record<string, string> = {
   d: "/discovery",
   c: "/cleanup",
   i: "/import",
-  s: "/system",
+  s: "/settings",
 };
 
 const HELP: { keys: string[]; label: string }[] = [
@@ -20,8 +20,8 @@ const HELP: { keys: string[]; label: string }[] = [
   { keys: ["g", "d"], label: "Discovery" },
   { keys: ["g", "c"], label: "Cleanup" },
   { keys: ["g", "i"], label: "Import" },
-  { keys: ["g", "s"], label: "System" },
-  { keys: ["⌘/Ctrl", ","], label: "Open System / settings" },
+  { keys: ["g", "s"], label: "Settings" },
+  { keys: ["⌘/Ctrl", ","], label: "Open Settings" },
   { keys: ["r"], label: "Reload library" },
   { keys: ["?"], label: "Show this help" },
 ];
@@ -62,7 +62,7 @@ export function KeyboardShortcuts() {
 
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
-        router.push("/system");
+        router.push("/settings");
         return;
       }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
