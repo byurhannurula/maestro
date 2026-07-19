@@ -70,6 +70,8 @@ interface RawSong {
   path?: string;
   createdAt?: string;
   playDate?: string;
+  bitRate?: number;
+  size?: number | string;
 }
 
 function mapSong(s: RawSong): Song {
@@ -85,6 +87,8 @@ function mapSong(s: RawSong): Song {
     path: s.path,
     createdAt: s.createdAt,
     lastPlayed: s.playDate,
+    bitRate: typeof s.bitRate === "number" ? s.bitRate : undefined,
+    sizeBytes: s.size != null ? Number(s.size) : undefined,
   };
 }
 

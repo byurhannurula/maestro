@@ -16,6 +16,10 @@ export interface Song {
   /** ISO timestamps, when known. */
   createdAt?: string;
   lastPlayed?: string;
+  /** Audio bitrate in kbps, when known (used to pick the best duplicate). */
+  bitRate?: number;
+  /** File size in bytes, when known. */
+  sizeBytes?: number;
 }
 
 export interface Playlist {
@@ -45,6 +49,31 @@ export type SongSortKey =
   | "playCount"
   | "createdAt"
   | "lastPlayed";
+
+/** A cluster of tracks that normalise to the same artist+title. */
+export interface DuplicateGroup {
+  /** Normalised grouping key (internal). */
+  key: string;
+  /** Display artist/title, taken from the suggested keeper. */
+  artist: string;
+  title: string;
+  /** Members, suggested keeper first. */
+  members: Song[];
+  /** True when member durations span > a few seconds (likely different versions). */
+  versionsDiffer: boolean;
+  /** Bytes freed if every non-keeper copy is trashed. */
+  reclaimableBytes: number;
+}
+
+export interface DuplicatesResult {
+  groups: DuplicateGroup[];
+  source: DataSource;
+  /** Total tracks scanned. */
+  scanned: number;
+  /** Total tracks that sit inside a duplicate group. */
+  duplicateTracks: number;
+  error?: string;
+}
 
 export interface SongQuery {
   start: number;

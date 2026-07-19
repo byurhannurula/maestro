@@ -4,11 +4,37 @@ import { nowMs } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";
 import { SourceBanner } from "@/components/source-banner";
 import { SongsTable } from "@/components/songs-table";
+import { CleanupTabs } from "@/components/cleanup-tabs";
+import { DuplicatesView } from "@/components/duplicates-view";
 
 export const dynamic = "force-dynamic";
 
-export default async function CleanupPage() {
-  // Stale finder: ONLY never-played tracks (the dead weight).
+export default async function CleanupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const { view } = await searchParams;
+  const now = nowMs();
+
+  if (view === "duplicates") {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="shrink-0">
+          <PageHeader
+            title="Cleanup"
+            subtitle="Duplicate copies of the same track. Keep one, trash the rest — files move to ./trash."
+            actions={<CleanupTabs />}
+          />
+        </div>
+        <div className="min-h-0 flex-1">
+          <DuplicatesView now={now} />
+        </div>
+      </div>
+    );
+  }
+
+  // Stale finder: never-played tracks that weren't just added (the dead weight).
   const [initial, { playlists }] = await Promise.all([
     getLibrarySongs({
       start: 0,
@@ -20,7 +46,6 @@ export default async function CleanupPage() {
     }),
     getLibraryPlaylists(),
   ]);
-  const now = nowMs();
 
   return (
     <div className="flex h-full flex-col">
@@ -28,6 +53,7 @@ export default async function CleanupPage() {
         <PageHeader
           title="Cleanup"
           subtitle="Tracks you've never played and didn't just add — the dead weight. Tune the age cutoff to exclude fresh imports. Files move to ./trash, nothing is destroyed."
+          actions={<CleanupTabs />}
         />
         <SourceBanner source={initial.source} error={initial.error} />
       </div>
