@@ -64,8 +64,8 @@ username/org to pull the released image.
 
 ## Releasing to GHCR
 
-Pushing a semver tag triggers the `release` GitHub Action, which builds a multi-arch image
-(`linux/amd64`, `linux/arm64`) and pushes it to `ghcr.io/<owner>/maestro`:
+Pushing a semver tag triggers the `release` GitHub Action, which builds a `linux/amd64` image
+and pushes it to `ghcr.io/<owner>/maestro`:
 
 ```bash
 pnpm release:patch   # bumps version, creates + pushes the tag
