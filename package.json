@@ -1,8 +1,10 @@
 {
+  "private": false,
   "name": "maestro",
   "version": "0.1.3",
-  "private": true,
-  "packageManager": "pnpm@11.5.0",
+  "description": "Self-hosted, track-first companion app for a Navidrome library: flat single-track browsing with server-side sort/filter, bulk actions, name-based import through a pluggable download backend, cleanup of never-played tracks, and safe delete-to-trash.",  
+  "author": "Byurhan Nurula (https://github.com/byurhannurula)",
+  "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -44,5 +46,27 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
-  }
+  },
+  "homepage": "https://github.com/byurhannurula/maestro#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/byurhannurula/maestro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/byurhannurula/maestro/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.5.0",
+  "keywords": [
+    "navidrome",
+    "self-hosted",
+    "music",
+    "music-library",
+    "music-manager",
+    "subsonic",
+    "homelab",
+    "nextjs"
+  ]
 }

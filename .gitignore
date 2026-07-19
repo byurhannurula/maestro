@@ -235,3 +235,5 @@ next-env.d.ts
 /beets
 /config
 /trash
+# Local product spec — not published
+docs/PRD.md
