@@ -109,6 +109,26 @@ export function getBatch(id: string): ImportBatch | undefined {
   return store.get(id);
 }
 
+/** Remove a single batch from history. No-op if unknown. */
+export function deleteBatch(id: string): boolean {
+  const existed = store.delete(id);
+  if (existed) save();
+  return existed;
+}
+
+/** Drop every finished batch from history; returns how many were removed. */
+export function clearFinishedBatches(): number {
+  let removed = 0;
+  for (const [id, b] of store) {
+    if (b.done) {
+      store.delete(id);
+      removed++;
+    }
+  }
+  if (removed) save();
+  return removed;
+}
+
 export function listBatches(): ImportBatch[] {
   return [...store.values()].sort((a, b) => b.createdAt - a.createdAt);
 }

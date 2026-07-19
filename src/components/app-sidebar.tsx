@@ -25,7 +25,7 @@ import { Logo } from "@/components/logo";
 import { ScrollingText } from "@/components/scrolling-text";
 import { ThemeMenuSub } from "@/components/theme-toggle";
 import { useSidebar } from "@/components/sidebar-provider";
-import { useShortcut } from "@/components/shortcuts";
+import { useShortcut, useShortcutHint } from "@/components/shortcuts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -59,6 +60,8 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
   const router = useRouter();
   const { collapsed, toggle, setCollapsed } = useSidebar();
   const [reloading, setReloading] = useState(false);
+  const settingsHint = useShortcutHint("open-settings");
+  const reloadHint = useShortcutHint("reload");
 
   // On mobile the sidebar is an overlay, so close it after navigating.
   const closeOnMobile = useCallback(() => {
@@ -70,6 +73,7 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
     combo: "mod+b",
     label: "Toggle sidebar",
     group: "View",
+    allowInInput: true,
     run: toggle,
   });
 
@@ -217,9 +221,11 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/settings")}>
                     <Settings className="size-4" /> Settings
+                    {settingsHint && <DropdownMenuShortcut>{settingsHint}</DropdownMenuShortcut>}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={reloadLibrary}>
                     <RefreshCw className="size-4" /> Reload library
+                    {reloadHint && <DropdownMenuShortcut>{reloadHint}</DropdownMenuShortcut>}
                   </DropdownMenuItem>
                   <ThemeMenuSub />
                   <DropdownMenuSeparator />

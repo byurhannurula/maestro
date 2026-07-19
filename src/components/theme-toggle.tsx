@@ -10,11 +10,13 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useShortcutHint } from "@/components/shortcuts";
 
 const OPTIONS = [
   { value: "light", label: "Light", icon: Sun },
@@ -73,11 +75,13 @@ export function ThemeToggle({ className }: { className?: string }) {
 export function ThemeMenuSub() {
   const { theme, resolvedTheme, setTheme, mounted } = useThemeState();
   const TriggerIcon = mounted && resolvedTheme === "dark" ? Moon : Sun;
+  const hint = useShortcutHint("toggle-theme");
 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <TriggerIcon className="size-4" /> Theme
+        {hint && <DropdownMenuShortcut>{hint}</DropdownMenuShortcut>}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
         <DropdownMenuRadioGroup value={mounted ? theme : undefined} onValueChange={setTheme}>

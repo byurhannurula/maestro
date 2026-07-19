@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { requireSession } from "@/lib/auth";
 import { parseImportList } from "@/lib/import/parse";
-import { createBatch, listBatches } from "@/lib/import/store";
+import { createBatch, listBatches, clearFinishedBatches } from "@/lib/import/store";
 import { runBatch } from "@/lib/import/worker";
 import { isNavidromeConfigured } from "@/lib/env";
 
@@ -13,6 +13,15 @@ export async function GET() {
   if (gate.response) return gate.response;
 
   return NextResponse.json({ batches: listBatches() });
+}
+
+/** Clear finished batches from history (running ones are kept). */
+export async function DELETE(req: NextRequest) {
+  const gate = await requireSession(req.headers);
+  if (gate.response) return gate.response;
+
+  const removed = clearFinishedBatches();
+  return NextResponse.json({ removed, batches: listBatches() });
 }
 
 export async function POST(req: NextRequest) {

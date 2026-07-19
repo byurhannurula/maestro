@@ -212,12 +212,33 @@ export function useShortcutList(): ShortcutSpec[] {
   return useContext(ListContext);
 }
 
-/** Render a combo as display keys: "mod+b" → ["⌘/Ctrl", "B"], "g a" → ["G", "A"]. */
+/**
+ * Display hint for a registered shortcut, by id — e.g. "S", "G A", "⌘/Ctrl ,".
+ * Returns null if nothing with that id is registered, so UI hints stay in sync
+ * with the actual bindings (single source of truth).
+ */
+export function useShortcutHint(id: string): string | null {
+  const list = useShortcutList();
+  const spec = list.find((s) => s.id === id);
+  if (!spec) return null;
+  // Mod combos read tighter without spaces (⌘J); leader sequences keep a space (G A).
+  const isSequence = spec.combo.includes(" ");
+  return comboKeys(spec.combo).join(isSequence ? " " : "");
+}
+
+// Display glyph for the platform "mod" key: ⌘ on Apple, Ctrl elsewhere.
+// (Bindings still fire on Ctrl cross-platform; this is display only.)
+const MOD_GLYPH =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ? "⌘"
+    : "Ctrl";
+
+/** Render a combo as display keys: "mod+b" → ["⌘", "B"], "g a" → ["G", "A"]. */
 export function comboKeys(combo: string): string[] {
   return combo.split(" ").flatMap((token) =>
     token.split("+").map((p) => {
       const l = p.toLowerCase();
-      if (l === "mod") return "⌘/Ctrl";
+      if (l === "mod") return MOD_GLYPH;
       if (l === "shift") return "⇧";
       if (l === "alt") return "⌥";
       return p.length === 1 ? p.toUpperCase() : p;

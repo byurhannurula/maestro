@@ -24,6 +24,7 @@ import { formatDuration, relativeTime } from "@/lib/format";
 import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
 import { cn } from "@/lib/utils";
 import { ScrollingText } from "@/components/scrolling-text";
+import { useShortcut, useShortcutHint } from "@/components/shortcuts";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -213,6 +214,22 @@ export function SongsTable({
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchHint = useShortcutHint("focus-search");
+
+  // Cmd/Ctrl+F focuses the search box (overrides browser find — intentional for
+  // an in-app data search). Works even from another field.
+  useShortcut({
+    id: "focus-search",
+    combo: "mod+f",
+    label: "Focus search",
+    group: "View",
+    allowInInput: true,
+    run: () => {
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    },
+  });
   const [hiddenCols, setHiddenCols] = usePersistent<ColId[]>("maestro.hiddenCols", ["album"]);
   const [pageSize, setPageSize] = usePersistent<number>("maestro.pageSize", defaultPageSize);
   const [staleDays, setStaleDays] = usePersistent<number>("maestro.staleDays", defaultStaleDays);
@@ -563,11 +580,17 @@ export function SongsTable({
         <div className="relative min-w-0 flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchRef}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search title, artist, album…"
-            className="pl-9"
+            className="px-9"
           />
+          {!searchInput && searchHint && (
+            <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">
+              {searchHint}
+            </kbd>
+          )}
         </div>
 
         <Button
