@@ -1,6 +1,6 @@
 import "server-only";
-import { auth } from "./auth";
-import { env, hasSeedAdmin } from "./env";
+import { auth } from "@/lib/auth";
+import { env, hasSeedAdmin } from "@/lib/env";
 
 /**
  * Provision the break-glass admin from ADMIN_EMAIL / ADMIN_PASSWORD, once.

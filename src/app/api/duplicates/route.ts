@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { getDuplicateGroups } from "@/lib/library";
+import { getDuplicateGroups } from "@/lib/navidrome/library";
 
 export const dynamic = "force-dynamic";
 

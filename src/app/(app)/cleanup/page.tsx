@@ -1,4 +1,4 @@
-import { getLibrarySongs, getLibraryPlaylists } from "@/lib/library";
+import { getLibrarySongs, getLibraryPlaylists } from "@/lib/navidrome/library";
 import { env } from "@/lib/env";
 import { nowMs } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";

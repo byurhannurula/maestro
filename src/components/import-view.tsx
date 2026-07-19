@@ -11,8 +11,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { parseImportList } from "@/lib/parse-import";
-import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import-store";
+import { parseImportList } from "@/lib/import/parse";
+import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import/store";
 import type { Playlist } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,11 @@ function JobStatusLabel({ job }: { job: ImportJob }) {
       </span>
     );
   if (s === "needs_review")
-    return <Badge variant="outline" className="border-amber-500/40 text-amber-300">needs review</Badge>;
+    return (
+      <Badge variant="outline" className="border-amber-500/40 text-amber-300">
+        needs review
+      </Badge>
+    );
   if (s === "skipped") return <span className="text-xs text-muted-foreground">skipped</span>;
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-red-400">
@@ -150,7 +154,8 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jobId, action, songId }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);
+      if (!res.ok)
+        throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);
       await refresh();
     } catch (e) {
       toast.error(`Action failed: ${e instanceof Error ? e.message : e}`);
@@ -210,7 +215,9 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
         <div className="flex items-center gap-3 lg:flex-col lg:items-stretch">
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm hover:bg-accent">
-              <span className="truncate">Target: <span className="font-medium text-foreground">{target.label}</span></span>
+              <span className="truncate">
+                Target: <span className="font-medium text-foreground">{target.label}</span>
+              </span>
               <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
@@ -227,7 +234,10 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
               </DropdownMenuItem>
               {playlists.length > 0 && <DropdownMenuSeparator />}
               {playlists.map((pl) => (
-                <DropdownMenuItem key={pl.id} onClick={() => setTarget({ id: pl.id, label: pl.name })}>
+                <DropdownMenuItem
+                  key={pl.id}
+                  onClick={() => setTarget({ id: pl.id, label: pl.name })}
+                >
                   <span className="truncate">{pl.name}</span>
                 </DropdownMenuItem>
               ))}
@@ -237,7 +247,11 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{parsed.length} parsed</Badge>
             <Button onClick={start} disabled={starting || parsed.length === 0}>
-              {starting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              {starting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
               Start
             </Button>
           </div>
@@ -264,10 +278,16 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
                     onClick={() => toggle(b.id)}
                     className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40"
                   >
-                    {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                    {isOpen ? (
+                      <ChevronDown className="size-4" />
+                    ) : (
+                      <ChevronRight className="size-4" />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-sm font-medium">
-                        {b.playlistName ?? playlists.find((p) => p.id === b.playlistId)?.name ?? "No playlist"}
+                        {b.playlistName ??
+                          playlists.find((p) => p.id === b.playlistId)?.name ??
+                          "No playlist"}
                         {!b.done && <Loader2 className="size-3.5 animate-spin text-blue-300" />}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -275,9 +295,21 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5 text-xs">
-                      {c.added > 0 && <Badge variant="secondary" className="text-emerald-400">{c.added} added</Badge>}
-                      {c.review > 0 && <Badge variant="outline" className="border-amber-500/40 text-amber-300">{c.review} review</Badge>}
-                      {c.failed > 0 && <Badge variant="outline" className="border-red-500/40 text-red-400">{c.failed} failed</Badge>}
+                      {c.added > 0 && (
+                        <Badge variant="secondary" className="text-emerald-400">
+                          {c.added} added
+                        </Badge>
+                      )}
+                      {c.review > 0 && (
+                        <Badge variant="outline" className="border-amber-500/40 text-amber-300">
+                          {c.review} review
+                        </Badge>
+                      )}
+                      {c.failed > 0 && (
+                        <Badge variant="outline" className="border-red-500/40 text-red-400">
+                          {c.failed} failed
+                        </Badge>
+                      )}
                       {c.active > 0 && <Badge variant="outline">{c.active} running</Badge>}
                     </div>
                   </button>
@@ -288,30 +320,38 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
                       <table className="w-full text-sm">
                         <tbody>
                           {b.jobs.map((job) => (
-                            <tr key={job.id} className="border-b border-border/40 last:border-0 align-top">
+                            <tr
+                              key={job.id}
+                              className="border-b border-border/40 last:border-0 align-top"
+                            >
                               <td className="px-4 py-2">
                                 <div className="font-medium">{job.title ?? job.line}</div>
                                 <div className="text-xs text-muted-foreground">{job.artist}</div>
-                                {job.error && <div className="text-xs text-red-400/80">{job.error}</div>}
-                                {job.status === "needs_review" && job.candidates && job.candidates.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {job.candidates.map((c) => (
-                                      <button
-                                        key={c.id}
-                                        onClick={() => resolve(b.id, job.id, "pick", c.id)}
-                                        className="rounded-md border border-border px-2 py-1 text-xs hover:border-primary hover:bg-primary/10"
-                                      >
-                                        {c.title} — <span className="text-muted-foreground">{c.artist}</span>
-                                      </button>
-                                    ))}
-                                    <button
-                                      onClick={() => resolve(b.id, job.id, "skip")}
-                                      className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                      skip
-                                    </button>
-                                  </div>
+                                {job.error && (
+                                  <div className="text-xs text-red-400/80">{job.error}</div>
                                 )}
+                                {job.status === "needs_review" &&
+                                  job.candidates &&
+                                  job.candidates.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                      {job.candidates.map((c) => (
+                                        <button
+                                          key={c.id}
+                                          onClick={() => resolve(b.id, job.id, "pick", c.id)}
+                                          className="rounded-md border border-border px-2 py-1 text-xs hover:border-primary hover:bg-primary/10"
+                                        >
+                                          {c.title} —{" "}
+                                          <span className="text-muted-foreground">{c.artist}</span>
+                                        </button>
+                                      ))}
+                                      <button
+                                        onClick={() => resolve(b.id, job.id, "skip")}
+                                        className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                                      >
+                                        skip
+                                      </button>
+                                    </div>
+                                  )}
                               </td>
                               <td className="whitespace-nowrap px-4 py-2 text-right">
                                 <JobStatusLabel job={job} />

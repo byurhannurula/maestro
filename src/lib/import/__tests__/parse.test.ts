@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseImportLine, parseImportList } from "./parse-import";
+import { parseImportLine, parseImportList } from "@/lib/import/parse";
 
 describe("parseImportLine", () => {
   it("splits a simple 'Artist - Title' line", () => {
@@ -37,9 +37,7 @@ describe("parseImportLine", () => {
   });
 
   it("keeps remix qualifiers in the title", () => {
-    const r = parseImportLine(
-      "Miike Snow,Louis The Child - Genghis Khan - Louis the Child Remix",
-    );
+    const r = parseImportLine("Miike Snow,Louis The Child - Genghis Khan - Louis the Child Remix");
     expect(r?.title).toBe("Genghis Khan - Louis the Child Remix");
     expect(r?.searchQuery).toContain("Louis the Child Remix");
   });

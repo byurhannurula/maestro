@@ -1,13 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { getBatch } from "@/lib/import-store";
+import { getBatch } from "@/lib/import/store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  req: NextRequest,
-  ctx: { params: Promise<{ batchId: string }> },
-) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ batchId: string }> }) {
   const gate = await requireSession(req.headers);
   if (gate.response) return gate.response;
 

@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { startScan, getScanStatus } from "@/lib/subsonic";
+import { startScan, getScanStatus } from "@/lib/navidrome/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
-import { bust } from "@/lib/cache";
+import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 

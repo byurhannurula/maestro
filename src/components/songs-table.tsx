@@ -138,7 +138,10 @@ function usePersistent<T>(key: string, initial: T): [T, (v: T | ((p: T) => T)) =
 function Cover({ coverArt, size = 36 }: { coverArt?: string; size?: number }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="shrink-0 overflow-hidden rounded bg-muted" style={{ width: size, height: size }}>
+    <div
+      className="shrink-0 overflow-hidden rounded bg-muted"
+      style={{ width: size, height: size }}
+    >
       {coverArt && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -471,7 +474,11 @@ export function SongsTable({
         style={{ gridTemplateColumns, height: ROW_HEIGHT, transform: `translateY(${offset}px)` }}
       >
         <div className="pl-6">
-          <Checkbox checked={isSel} onCheckedChange={() => selectRow(index)} aria-label="Select row" />
+          <Checkbox
+            checked={isSel}
+            onCheckedChange={() => selectRow(index)}
+            aria-label="Select row"
+          />
         </div>
         <div className="flex justify-center">
           <Cover coverArt={s.coverArt} />
@@ -575,7 +582,10 @@ export function SongsTable({
               ))}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <DropdownMenuRadioGroup
+              value={String(pageSize)}
+              onValueChange={(v) => setPageSize(Number(v))}
+            >
               <DropdownMenuLabel>Rows per page</DropdownMenuLabel>
               {PAGE_SIZES.map((n) => (
                 <DropdownMenuRadioItem key={n} value={String(n)}>
@@ -590,9 +600,13 @@ export function SongsTable({
           {loading && <Loader2 className="size-4 animate-spin" />}
           {source === "sample" && <span className="text-amber-400">sample</span>}
           {unplayedOnly ? (
-            <>{songs.length.toLocaleString()} never-played{reachedEnd ? "" : "+"}</>
+            <>
+              {songs.length.toLocaleString()} never-played{reachedEnd ? "" : "+"}
+            </>
           ) : (
-            <>showing {songs.length.toLocaleString()} of {total.toLocaleString()}</>
+            <>
+              showing {songs.length.toLocaleString()} of {total.toLocaleString()}
+            </>
           )}
         </div>
       </div>
@@ -602,70 +616,73 @@ export function SongsTable({
         className="grid items-center border-b border-border bg-background text-xs"
         style={{ gridTemplateColumns, height: 41 }}
       >
-          <div className="pl-6">
-            <Checkbox
-              checked={allSelected}
-              indeterminate={someSelected}
-              onCheckedChange={() =>
-                setSelected(allSelected ? new Set() : new Set(songs.map((s) => s.id)))
-              }
-              aria-label="Select all loaded"
-            />
-          </div>
-          <div />
-          {visibleCols.map((col) => {
-            const active = col.sortKey !== null && sort === col.sortKey;
-            return (
-              <div key={col.id} className={cn("min-w-0 px-3", col.align === "right" && "flex justify-end")}>
-                {col.sortKey === null || unplayedOnly ? (
-                  <span className="font-medium text-muted-foreground">{col.label}</span>
-                ) : (
-                  <button
-                    onClick={() => toggleSort(col.sortKey!)}
-                    className={cn(
-                      "flex items-center gap-1 font-medium hover:text-foreground",
-                      active ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {col.label}
-                    {active &&
-                      (order === "ASC" ? (
-                        <ArrowUp className="size-3" />
-                      ) : (
-                        <ArrowDown className="size-3" />
-                      ))}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          <div />
+        <div className="pl-6">
+          <Checkbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onCheckedChange={() =>
+              setSelected(allSelected ? new Set() : new Set(songs.map((s) => s.id)))
+            }
+            aria-label="Select all loaded"
+          />
+        </div>
+        <div />
+        {visibleCols.map((col) => {
+          const active = col.sortKey !== null && sort === col.sortKey;
+          return (
+            <div
+              key={col.id}
+              className={cn("min-w-0 px-3", col.align === "right" && "flex justify-end")}
+            >
+              {col.sortKey === null || unplayedOnly ? (
+                <span className="font-medium text-muted-foreground">{col.label}</span>
+              ) : (
+                <button
+                  onClick={() => toggleSort(col.sortKey!)}
+                  className={cn(
+                    "flex items-center gap-1 font-medium hover:text-foreground",
+                    active ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {col.label}
+                  {active &&
+                    (order === "ASC" ? (
+                      <ArrowUp className="size-3" />
+                    ) : (
+                      <ArrowDown className="size-3" />
+                    ))}
+                </button>
+              )}
+            </div>
+          );
+        })}
+        <div />
+      </div>
+
+      {/* Scroll area — virtualized rows only */}
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          setShowTop(el.scrollTop > 600);
+          if (el.scrollHeight - el.scrollTop - el.clientHeight < 400) loadMore();
+        }}
+        className="flex-1 overflow-auto"
+      >
+        <div className="relative" style={{ height: rowVirtualizer.getTotalSize() }}>
+          {virtualItems.map((vi) => renderRow(songs[vi.index], vi.index, vi.start))}
         </div>
 
-        {/* Scroll area — virtualized rows only */}
-        <div
-          ref={scrollRef}
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            setShowTop(el.scrollTop > 600);
-            if (el.scrollHeight - el.scrollTop - el.clientHeight < 400) loadMore();
-          }}
-          className="flex-1 overflow-auto"
-        >
-          <div className="relative" style={{ height: rowVirtualizer.getTotalSize() }}>
-            {virtualItems.map((vi) => renderRow(songs[vi.index], vi.index, vi.start))}
-          </div>
-
-          <div className="px-6 py-4 text-center text-sm text-muted-foreground">
-            {loading
-              ? "Loading…"
-              : reachedEnd
-                ? songs.length === 0
-                  ? "No songs match."
-                  : "End of list."
-                : ""}
-          </div>
+        <div className="px-6 py-4 text-center text-sm text-muted-foreground">
+          {loading
+            ? "Loading…"
+            : reachedEnd
+              ? songs.length === 0
+                ? "No songs match."
+                : "End of list."
+              : ""}
         </div>
+      </div>
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
@@ -678,13 +695,20 @@ export function SongsTable({
               <DropdownMenuTrigger className="inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm hover:bg-accent hover:text-accent-foreground">
                 <ListPlus className="size-4" /> Add to playlist
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="center" className="max-h-72 w-56 overflow-y-auto">
+              <DropdownMenuContent
+                side="top"
+                align="center"
+                className="max-h-72 w-56 overflow-y-auto"
+              >
                 <DropdownMenuItem onClick={createPlaylistAndAdd}>
                   <Plus className="size-4" /> New playlist…
                 </DropdownMenuItem>
                 {playlists.length > 0 && <DropdownMenuSeparator />}
                 {playlists.map((pl) => (
-                  <DropdownMenuItem key={pl.id} onClick={() => addSelectedToPlaylist(pl.id, pl.name)}>
+                  <DropdownMenuItem
+                    key={pl.id}
+                    onClick={() => addSelectedToPlaylist(pl.id, pl.name)}
+                  >
                     <span className="truncate">{pl.name}</span>
                   </DropdownMenuItem>
                 ))}

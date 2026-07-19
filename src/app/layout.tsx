@@ -12,9 +12,7 @@ export const metadata: Metadata = {
   description: "Track-first manager for a Navidrome + deemix music library.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"

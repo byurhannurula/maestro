@@ -1,8 +1,9 @@
 import "server-only";
 import type { Dirent } from "node:fs";
 import { access, copyFile, mkdir, readdir, rename, rm, stat, unlink } from "node:fs/promises";
-import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
-import { env } from "./env";
+import { dirname, extname, join, relative } from "node:path";
+import { env } from "@/lib/env";
+import { safeRelPath } from "@/lib/storage/paths";
 
 /**
  * Delete = move a track's file out of the Navidrome-scanned tree into ./trash,
@@ -17,18 +18,7 @@ export interface MoveResult {
 }
 
 /** Resolve a library-relative path under MUSIC_DIR, rejecting any escape. */
-function safeSource(rel: string): string | null {
-  let r = rel;
-  if (isAbsolute(r)) {
-    const asRel = relative(env.MUSIC_DIR, r);
-    if (asRel.startsWith("..") || isAbsolute(asRel)) return null;
-    r = asRel;
-  }
-  const abs = resolve(env.MUSIC_DIR, r);
-  const back = relative(env.MUSIC_DIR, abs);
-  if (back.startsWith("..") || isAbsolute(back)) return null;
-  return abs;
-}
+const safeSource = (rel: string) => safeRelPath(rel, env.MUSIC_DIR);
 
 async function exists(p: string): Promise<boolean> {
   try {

@@ -1,0 +1,10 @@
+# Format + lint staged files, then scan them for secrets.
+pnpm exec lint-staged
+
+# Secret scan (strict): fails the commit if gitleaks isn't installed.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks is not installed. Install it: https://github.com/gitleaks/gitleaks#installing"
+  echo "  brew install gitleaks"
+  exit 1
+fi
+gitleaks protect --staged --redact --no-banner

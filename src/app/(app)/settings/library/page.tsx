@@ -1,7 +1,7 @@
 import { Download, HardDrive, Library, Server } from "lucide-react";
-import { getLibraryStats, getSystemStatus } from "@/lib/library";
-import { getScanStatus, getServerInfo } from "@/lib/subsonic";
-import { getTrashInfo } from "@/lib/trash";
+import { getLibraryStats, getSystemStatus } from "@/lib/navidrome/library";
+import { getScanStatus, getServerInfo } from "@/lib/navidrome/subsonic";
+import { getTrashInfo } from "@/lib/storage/trash";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { SettingsCard, Field, Stat, type FieldState } from "@/components/settings-ui";
 import { EmptyTrashButton } from "@/components/empty-trash-button";
@@ -34,7 +34,11 @@ export default async function LibrarySettings() {
         </div>
       </SettingsCard>
 
-      <SettingsCard title="Navidrome" icon={Server} action={s.navidrome.reachable ? <ScanButton /> : null}>
+      <SettingsCard
+        title="Navidrome"
+        icon={Server}
+        action={s.navidrome.reachable ? <ScanButton /> : null}
+      >
         <Field
           label="Status"
           state={s.navidrome.configured ? bool(s.navidrome.reachable) : "off"}
@@ -48,7 +52,9 @@ export default async function LibrarySettings() {
         />
         <Field
           label="Server"
-          value={server.serverVersion ? `${server.type ?? "navidrome"} ${server.serverVersion}` : "—"}
+          value={
+            server.serverVersion ? `${server.type ?? "navidrome"} ${server.serverVersion}` : "—"
+          }
           mono
         />
         <Field label="URL" value={s.navidrome.url} mono />

@@ -2,18 +2,12 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function LoginForm({
-  pocketIdEnabled,
-  next,
-}: {
-  pocketIdEnabled: boolean;
-  next: string;
-}) {
+export function LoginForm({ pocketIdEnabled, next }: { pocketIdEnabled: boolean; next: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState<"email" | "pocketid" | null>(null);

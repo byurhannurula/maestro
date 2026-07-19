@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { moveToTrash, type MoveResult } from "@/lib/trash";
-import { startScan } from "@/lib/subsonic";
-import { getSongPaths } from "@/lib/native";
+import { moveToTrash, type MoveResult } from "@/lib/storage/trash";
+import { startScan } from "@/lib/navidrome/subsonic";
+import { getSongPaths } from "@/lib/navidrome/native";
 import { isNavidromeConfigured } from "@/lib/env";
-import { bust } from "@/lib/cache";
+import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { getMigrations } from "better-auth/db/migration";
-import { auth } from "./auth";
+import { auth } from "@/lib/auth";
 
 /**
  * Create/patch the better-auth tables in the SQLite file at runtime. The schema

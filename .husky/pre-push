@@ -1,0 +1,3 @@
+# Gate pushes on a clean typecheck + passing tests.
+pnpm typecheck
+pnpm test

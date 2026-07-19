@@ -1,8 +1,8 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { env } from "./env";
-import { cached } from "./cache";
-import type { Playlist, Song } from "./types";
+import { env } from "@/lib/env";
+import { cached } from "@/lib/storage/cache";
+import type { Playlist, Song } from "@/lib/types";
 
 /**
  * Subsonic API client (`/rest/*`) — the STABLE surface.
@@ -41,10 +41,7 @@ async function request<T = unknown>(endpoint: string, params: URLSearchParams): 
   return sub as T;
 }
 
-async function call<T = unknown>(
-  endpoint: string,
-  extra: Record<string, string> = {},
-): Promise<T> {
+async function call<T = unknown>(endpoint: string, extra: Record<string, string> = {}): Promise<T> {
   const params = authParams();
   for (const [k, v] of Object.entries(extra)) params.set(k, v);
   return request<T>(endpoint, params);
@@ -69,7 +66,9 @@ export interface ServerInfo {
 /** Navidrome server version + type, from the ping response (OpenSubsonic). */
 export async function getServerInfo(): Promise<ServerInfo> {
   try {
-    const sub = await call<{ serverVersion?: string; type?: string; version?: string }>("ping.view");
+    const sub = await call<{ serverVersion?: string; type?: string; version?: string }>(
+      "ping.view",
+    );
     return {
       reachable: true,
       serverVersion: sub.serverVersion,
@@ -177,11 +176,7 @@ function mapSubsonicSong(s: RawSubsonicSong): Song {
  * Used when the browser has a search term — search3 handles fuzzy matching
  * that the Native API's single-field filter can't. Results are relevance-ordered.
  */
-async function search3SongsRaw(
-  query: string,
-  offset: number,
-  count: number,
-): Promise<Song[]> {
+async function search3SongsRaw(query: string, offset: number, count: number): Promise<Song[]> {
   const res = await call<{ searchResult3?: { song?: RawSubsonicSong[] } }>("search3.view", {
     query,
     songCount: String(count),

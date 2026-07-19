@@ -1,4 +1,4 @@
-import { getLibraryPlaylists } from "@/lib/library";
+import { getLibraryPlaylists } from "@/lib/navidrome/library";
 import { PageHeader } from "@/components/page-header";
 import { SourceBanner } from "@/components/source-banner";
 import { PlaylistsManager } from "@/components/playlists-manager";

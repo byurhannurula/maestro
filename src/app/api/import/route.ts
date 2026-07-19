@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { requireSession } from "@/lib/auth";
-import { parseImportList } from "@/lib/parse-import";
-import { createBatch, listBatches } from "@/lib/import-store";
-import { runBatch } from "@/lib/import-worker";
+import { parseImportList } from "@/lib/import/parse";
+import { createBatch, listBatches } from "@/lib/import/store";
+import { runBatch } from "@/lib/import/worker";
 import { isNavidromeConfigured } from "@/lib/env";
 
 export const dynamic = "force-dynamic";

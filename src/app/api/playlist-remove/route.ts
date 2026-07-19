@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { removeFromPlaylist } from "@/lib/subsonic";
+import { removeFromPlaylist } from "@/lib/navidrome/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
-import { bust } from "@/lib/cache";
+import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     ? body.indices.filter((n): n is number => typeof n === "number" && Number.isInteger(n))
     : [];
   if (!playlistId) return NextResponse.json({ error: "playlistId required" }, { status: 400 });
-  if (indices.length === 0) return NextResponse.json({ error: "indices required" }, { status: 400 });
+  if (indices.length === 0)
+    return NextResponse.json({ error: "indices required" }, { status: 400 });
 
   await removeFromPlaylist(playlistId, indices);
   bust("playlists");

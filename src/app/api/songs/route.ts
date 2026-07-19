@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { getLibrarySongs } from "@/lib/library";
+import { getLibrarySongs } from "@/lib/navidrome/library";
 import type { SongSortKey } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +27,7 @@ export async function GET(req: NextRequest) {
   const end = Math.min(requestedEnd, start + MAX_PAGE);
 
   const sortParam = sp.get("sort") as SongSortKey | null;
-  const sort: SongSortKey =
-    sortParam && SORT_KEYS.includes(sortParam) ? sortParam : "title";
+  const sort: SongSortKey = sortParam && SORT_KEYS.includes(sortParam) ? sortParam : "title";
   const order = sp.get("order") === "DESC" ? "DESC" : "ASC";
   const search = sp.get("search") ?? undefined;
   const playlistId = sp.get("playlist") ?? undefined;

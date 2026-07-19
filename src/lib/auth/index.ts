@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { betterAuth } from "better-auth";
 import { genericOAuth } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
-import { env, isPocketIdConfigured } from "./env";
+import { env, isPocketIdConfigured } from "@/lib/env";
 
 // During `next build` route modules are imported to collect metadata, but the
 // /data volume isn't mounted yet — use a throwaway in-memory DB so construction

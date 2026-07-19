@@ -2,9 +2,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { env } from "./env";
-import type { Song } from "./types";
-import type { DeezerTrack } from "./deemix";
+import { env } from "@/lib/env";
+import type { Song } from "@/lib/types";
+import type { DeezerTrack } from "@/lib/deemix";
 
 /**
  * Import-job store: kept in memory for live polling, and mirrored to a JSON file

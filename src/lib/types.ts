@@ -42,13 +42,7 @@ export interface SongsResult {
   error?: string;
 }
 
-export type SongSortKey =
-  | "title"
-  | "artist"
-  | "album"
-  | "playCount"
-  | "createdAt"
-  | "lastPlayed";
+export type SongSortKey = "title" | "artist" | "album" | "playCount" | "createdAt" | "lastPlayed";
 
 /** A cluster of tracks that normalise to the same artist+title. */
 export interface DuplicateGroup {

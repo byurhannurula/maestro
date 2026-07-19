@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -17,7 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
 import type { Playlist } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
@@ -49,15 +49,10 @@ function LinkSpinner() {
   return pending ? <Loader2 className="size-3.5 shrink-0 animate-spin" /> : null;
 }
 
-export function AppSidebar({
-  playlists,
-  username,
-}: {
-  playlists: Playlist[];
-  username: string;
-}) {
+export function AppSidebar({ playlists, username }: { playlists: Playlist[]; username: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [reloading, setReloading] = useState(false);
 
   async function signOut() {
     await authClient.signOut();
@@ -65,6 +60,8 @@ export function AppSidebar({
   }
 
   async function reloadLibrary() {
+    if (reloading) return;
+    setReloading(true);
     try {
       await fetch("/api/reload", { method: "POST" });
     } catch {
@@ -72,6 +69,7 @@ export function AppSidebar({
     }
     router.refresh();
     toast.success("Library reloaded");
+    setReloading(false);
   }
 
   async function createPlaylist() {
@@ -123,13 +121,25 @@ export function AppSidebar({
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Playlists
           </span>
-          <button
-            onClick={createPlaylist}
-            aria-label="New playlist"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Plus className="size-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={reloadLibrary}
+              disabled={reloading}
+              aria-label="Reload library"
+              title="Reload library"
+              className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={cn("size-4", reloading && "animate-spin")} />
+            </button>
+            <button
+              onClick={createPlaylist}
+              aria-label="New playlist"
+              title="New playlist"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           <Suspense fallback={<PlaylistLinks playlists={playlists} activeId={null} />}>
@@ -179,7 +189,13 @@ function SelectedPlaylistLinks({ playlists }: { playlists: Playlist[] }) {
   return <PlaylistLinks playlists={playlists} activeId={activeId} />;
 }
 
-function PlaylistLinks({ playlists, activeId }: { playlists: Playlist[]; activeId: string | null }) {
+function PlaylistLinks({
+  playlists,
+  activeId,
+}: {
+  playlists: Playlist[];
+  activeId: string | null;
+}) {
   return (
     <div className="flex flex-col gap-0.5">
       {playlists.map((pl) => (

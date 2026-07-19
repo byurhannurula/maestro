@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { isNavidromeConfigured } from "@/lib/env";
-import { coverArtUrl } from "@/lib/subsonic";
+import { coverArtUrl } from "@/lib/navidrome/subsonic";
 
 export const dynamic = "force-dynamic";
 

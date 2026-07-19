@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { requireSession } from "@/lib/auth";
-import { getLibraryPlaylists } from "@/lib/library";
-import { createPlaylist, deletePlaylist } from "@/lib/subsonic";
+import { getLibraryPlaylists } from "@/lib/navidrome/library";
+import { createPlaylist, deletePlaylist } from "@/lib/navidrome/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
-import { bust } from "@/lib/cache";
+import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 

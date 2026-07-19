@@ -99,5 +99,4 @@ export const isPocketIdConfigured =
   env.POCKETID_CLIENT_SECRET.length > 0;
 
 /** True when a seed admin should be provisioned on boot. */
-export const hasSeedAdmin =
-  env.ADMIN_EMAIL.length > 0 && env.ADMIN_PASSWORD.length > 0;
+export const hasSeedAdmin = env.ADMIN_EMAIL.length > 0 && env.ADMIN_PASSWORD.length > 0;

@@ -1,5 +1,5 @@
 import "server-only";
-import { env } from "./env";
+import { env } from "@/lib/env";
 
 /**
  * deemix webui REST client (bambanah/deemix).

@@ -1,4 +1,4 @@
-import { getLibrarySongs, getLibraryPlaylists } from "@/lib/library";
+import { getLibrarySongs, getLibraryPlaylists } from "@/lib/navidrome/library";
 import { env } from "@/lib/env";
 import { nowMs } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";
@@ -27,9 +27,7 @@ export default async function AllSongsPage({
   ]);
 
   const playlists = playlistsRes.playlists;
-  const selectedName = playlistId
-    ? playlists.find((p) => p.id === playlistId)?.name
-    : undefined;
+  const selectedName = playlistId ? playlists.find((p) => p.id === playlistId)?.name : undefined;
   const now = nowMs();
 
   return (

@@ -19,12 +19,12 @@ plus direct file deletion that Navidrome refuses to do — and a name-based impo
   configurable page size, show/hide columns (persisted).
 - **Playlists** — create, open (scoped in All Songs), delete; add/remove tracks; live in the
   sidebar.
-- **Discovery** *(mockup)* — recommendations tuned to your library: suggested tracks, similar
+- **Discovery** _(mockup)_ — recommendations tuned to your library: suggested tracks, similar
   artists, and ready-made mixes, with one-click queue / send-to-pipeline actions. Currently sample
   data — the intended feed is [Last.fm](https://www.last.fm/api) / [MusicBrainz](https://musicbrainz.org/)
   seeded from your top artists, wired into the import pipeline.
-- **Cleanup** — two modes. *Never played*: tracks you didn't just add (the dead weight), with an
-  age cutoff (default 30 days, tunable) that keeps fresh imports off the list. *Duplicates*:
+- **Cleanup** — two modes. _Never played_: tracks you didn't just add (the dead weight), with an
+  age cutoff (default 30 days, tunable) that keeps fresh imports off the list. _Duplicates_:
   groups copies of the same track (normalised artist+title, conservative/aggressive matching),
   suggests a keeper, and trashes the rest.
 - **Delete → trash** — files move to `./trash` (recoverable), then Navidrome is purge-rescanned.
@@ -42,20 +42,20 @@ a JSON file. All configuration is read from environment variables.
 
 All values come from env (see [`.env.example`](./.env.example)); nothing is hard-coded.
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `NAVIDROME_URL` | Navidrome base URL (internal service name in Docker) | `http://navidrome:4533` |
-| `NAVIDROME_USERNAME` / `NAVIDROME_PASSWORD` | Navidrome credentials | — |
-| `DEEMIX_URL` | Download backend base URL | `http://deemix:6595` |
-| `DEEMIX_ARL` | Download backend auth token (needed for imports) | — |
-| `MUSIC_DIR` / `TRASH_DIR` | Container paths for the music + trash volumes | `/music` / `/trash` |
-| `DATABASE_PATH` | App data dir (import history lives alongside) | `/data/maestro.db` |
-| `CACHE_TTL_SECONDS` | How long Navidrome reads are cached (busted on any change) | `86400` |
-| `DEFAULT_PAGE_SIZE` | Initial fetch / default rows per page (user can override in UI) | `25` |
-| `CLEANUP_MIN_AGE_DAYS` | Cleanup hides never-played tracks added more recently than this (excludes fresh imports; override per-visit in UI, `0` = off) | `30` |
-| `IMPORT_DELAY_MS` / `IMPORT_TIMEOUT_MS` | Import pipeline pacing | `1500` / `300000` |
-| `WEBHOOK_SECRET` / `WEBHOOK_PLAYLIST` | Reserved for the future webhook ingest | — / `Shazam` |
-| `PORT` | Server port | `4544` |
+| Variable                                    | Purpose                                                                                                                       | Default                 |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `NAVIDROME_URL`                             | Navidrome base URL (internal service name in Docker)                                                                          | `http://navidrome:4533` |
+| `NAVIDROME_USERNAME` / `NAVIDROME_PASSWORD` | Navidrome credentials                                                                                                         | —                       |
+| `DEEMIX_URL`                                | Download backend base URL                                                                                                     | `http://deemix:6595`    |
+| `DEEMIX_ARL`                                | Download backend auth token (needed for imports)                                                                              | —                       |
+| `MUSIC_DIR` / `TRASH_DIR`                   | Container paths for the music + trash volumes                                                                                 | `/music` / `/trash`     |
+| `DATABASE_PATH`                             | App data dir (import history lives alongside)                                                                                 | `/data/maestro.db`      |
+| `CACHE_TTL_SECONDS`                         | How long Navidrome reads are cached (busted on any change)                                                                    | `86400`                 |
+| `DEFAULT_PAGE_SIZE`                         | Initial fetch / default rows per page (user can override in UI)                                                               | `25`                    |
+| `CLEANUP_MIN_AGE_DAYS`                      | Cleanup hides never-played tracks added more recently than this (excludes fresh imports; override per-visit in UI, `0` = off) | `30`                    |
+| `IMPORT_DELAY_MS` / `IMPORT_TIMEOUT_MS`     | Import pipeline pacing                                                                                                        | `1500` / `300000`       |
+| `WEBHOOK_SECRET` / `WEBHOOK_PLAYLIST`       | Reserved for the future webhook ingest                                                                                        | — / `Shazam`            |
+| `PORT`                                      | Server port                                                                                                                   | `4544`                  |
 
 ## Running (deploy)
 

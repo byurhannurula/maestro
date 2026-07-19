@@ -1,7 +1,7 @@
 import "server-only";
-import { env } from "./env";
-import { cached } from "./cache";
-import type { Song, SongSortKey } from "./types";
+import { env } from "@/lib/env";
+import { cached } from "@/lib/storage/cache";
+import type { Song, SongSortKey } from "@/lib/types";
 
 /**
  * Navidrome NATIVE API client (`/api/*`) — the UNSTABLE surface.
@@ -92,9 +92,7 @@ function mapSong(s: RawSong): Song {
   };
 }
 
-async function getSongsRaw(
-  opts: GetSongsOptions = {},
-): Promise<{ songs: Song[]; total: number }> {
+async function getSongsRaw(opts: GetSongsOptions = {}): Promise<{ songs: Song[]; total: number }> {
   const token = await login();
   const start = opts.start ?? 0;
   const end = opts.end ?? 100;
@@ -123,9 +121,7 @@ async function getSongsRaw(
 }
 
 /** Cached song reads (tag "songs", TTL from env; busted on any mutation). */
-export function getSongs(
-  opts: GetSongsOptions = {},
-): Promise<{ songs: Song[]; total: number }> {
+export function getSongs(opts: GetSongsOptions = {}): Promise<{ songs: Song[]; total: number }> {
   return cached(`songs:${JSON.stringify(opts)}`, ["songs"], () => getSongsRaw(opts));
 }
 

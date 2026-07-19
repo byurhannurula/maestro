@@ -5,8 +5,8 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { runAuthMigrations } = await import("./lib/db-migrate");
-  const { seedAdmin } = await import("./lib/seed-admin");
+  const { runAuthMigrations } = await import("./lib/auth/db-migrate");
+  const { seedAdmin } = await import("./lib/auth/seed-admin");
   try {
     await runAuthMigrations();
     await seedAdmin();

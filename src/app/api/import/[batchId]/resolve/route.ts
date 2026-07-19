@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { getBatch, save } from "@/lib/import-store";
-import { addSongsToPlaylist } from "@/lib/subsonic";
+import { getBatch, save } from "@/lib/import/store";
+import { addSongsToPlaylist } from "@/lib/navidrome/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
-import { bust } from "@/lib/cache";
+import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +12,7 @@ export const dynamic = "force-dynamic";
  *  - action "pick": add the chosen candidate songId to the batch playlist → added
  *  - action "skip": mark the job skipped
  */
-export async function POST(
-  req: NextRequest,
-  ctx: { params: Promise<{ batchId: string }> },
-) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ batchId: string }> }) {
   const gate = await requireSession(req.headers);
   if (gate.response) return gate.response;
 

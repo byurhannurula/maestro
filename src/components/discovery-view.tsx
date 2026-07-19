@@ -14,12 +14,7 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import type {
-  RecoArtist,
-  RecoMix,
-  RecoSource,
-  RecoTrack,
-} from "@/lib/sample-discovery";
+import type { RecoArtist, RecoMix, RecoSource, RecoTrack } from "@/lib/sample-discovery";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -61,10 +56,7 @@ export function DiscoveryView({
 }) {
   const [queued, setQueued] = useState<Set<string>>(new Set());
 
-  const queuedTracks = useMemo(
-    () => tracks.filter((t) => queued.has(t.id)),
-    [tracks, queued],
-  );
+  const queuedTracks = useMemo(() => tracks.filter((t) => queued.has(t.id)), [tracks, queued]);
 
   function toggleQueue(t: RecoTrack) {
     setQueued((prev) => {
@@ -83,11 +75,15 @@ export function DiscoveryView({
   }
 
   function sendMix(mix: RecoMix) {
-    toast.info(`Preview only — would queue "${mix.title}" (${mix.tracks.length} tracks) to deemix.`);
+    toast.info(
+      `Preview only — would queue "${mix.title}" (${mix.tracks.length} tracks) to deemix.`,
+    );
   }
 
   function queueArtist(a: RecoArtist) {
-    toast.info(`Preview only — would fetch ${a.topTracks} top tracks from ${a.name} via ${a.source === "lastfm" ? "Last.fm" : "MusicBrainz"}.`);
+    toast.info(
+      `Preview only — would fetch ${a.topTracks} top tracks from ${a.name} via ${a.source === "lastfm" ? "Last.fm" : "MusicBrainz"}.`,
+    );
   }
 
   return (
@@ -97,8 +93,8 @@ export function DiscoveryView({
         <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
           <Info className="mt-0.5 size-4 shrink-0 text-amber-400" />
           <p className="text-muted-foreground">
-            <span className="font-medium text-amber-300">Preview.</span> Recommendations
-            here are sample data. Once wired up, they&apos;ll be seeded from your library via{" "}
+            <span className="font-medium text-amber-300">Preview.</span> Recommendations here are
+            sample data. Once wired up, they&apos;ll be seeded from your library via{" "}
             <span className="font-medium text-foreground">Last.fm</span> and{" "}
             <span className="font-medium text-foreground">MusicBrainz</span>, and the download
             actions will feed the existing deemix import pipeline.
@@ -107,7 +103,11 @@ export function DiscoveryView({
 
         {/* Ready-made mixes */}
         <section className="space-y-3">
-          <SectionHeading icon={Sparkles} title="Made for you" hint="Send a whole mix to the pipeline in one click" />
+          <SectionHeading
+            icon={Sparkles}
+            title="Made for you"
+            hint="Send a whole mix to the pipeline in one click"
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             {mixes.map((mix) => (
               <div
@@ -143,7 +143,11 @@ export function DiscoveryView({
 
         {/* Recommended tracks */}
         <section className="space-y-3">
-          <SectionHeading icon={TrendingUp} title="Recommended tracks" hint="Picked from what you play the most" />
+          <SectionHeading
+            icon={TrendingUp}
+            title="Recommended tracks"
+            hint="Picked from what you play the most"
+          />
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {tracks.map((t) => {
               const isQueued = queued.has(t.id);
@@ -189,7 +193,9 @@ export function DiscoveryView({
                         variant={isQueued ? "secondary" : "outline"}
                         onClick={() => toggleQueue(t)}
                         aria-pressed={isQueued}
-                        aria-label={isQueued ? `Remove ${t.title} from queue` : `Add ${t.title} to queue`}
+                        aria-label={
+                          isQueued ? `Remove ${t.title} from queue` : `Add ${t.title} to queue`
+                        }
                       >
                         {isQueued ? (
                           <>
@@ -211,7 +217,11 @@ export function DiscoveryView({
 
         {/* Similar artists */}
         <section className="space-y-3">
-          <SectionHeading icon={Radio} title="Artists to explore" hint="Similar to the artists you already own" />
+          <SectionHeading
+            icon={Radio}
+            title="Artists to explore"
+            hint="Similar to the artists you already own"
+          />
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {artists.map((a) => (
               <div

@@ -99,6 +99,16 @@ export function DuplicatesView({ now }: { now: number }) {
     });
   }
 
+  // Every non-keeper across all groups (keeper = first member of each group).
+  const nonKeeperIds = groups.flatMap((g) => g.members.slice(1).map((m) => m.id));
+  const allNonKeepersSelected =
+    nonKeeperIds.length > 0 && nonKeeperIds.every((id) => selected.has(id));
+
+  function toggleAllButKeepers() {
+    // Toggle: if every non-keeper is already selected, clear; else select them all.
+    setSelected(allNonKeepersSelected ? new Set() : new Set(nonKeeperIds));
+  }
+
   async function confirmDelete() {
     const ids = selectedSongs.map((s) => s.id);
     if (ids.length === 0) return;
@@ -167,6 +177,13 @@ export function DuplicatesView({ now }: { now: number }) {
         </span>
 
         <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground tabular-nums">
+          {!loading && nonKeeperIds.length > 0 && (
+            <Button size="sm" variant="ghost" className="text-xs" onClick={toggleAllButKeepers}>
+              {allNonKeepersSelected
+                ? "Clear selection"
+                : `Select all but keepers (${nonKeeperIds.length})`}
+            </Button>
+          )}
           {loading && <Loader2 className="size-4 animate-spin" />}
           {data?.source === "sample" && <span className="text-amber-400">sample</span>}
           {data && !loading && (
@@ -247,7 +264,10 @@ export function DuplicatesView({ now }: { now: number }) {
                                 {m.album || "—"}
                               </span>
                             </div>
-                            <div className="truncate font-mono text-xs text-muted-foreground/70" title={m.path}>
+                            <div
+                              className="truncate font-mono text-xs text-muted-foreground/70"
+                              title={m.path}
+                            >
                               {m.path ?? "no path"}
                             </div>
                           </div>
@@ -259,7 +279,9 @@ export function DuplicatesView({ now }: { now: number }) {
                             <span title="added" className="w-16 text-right">
                               {relativeTime(m.createdAt, now)}
                             </span>
-                            <span className="w-10 text-right">{formatDuration(m.durationSecs)}</span>
+                            <span className="w-10 text-right">
+                              {formatDuration(m.durationSecs)}
+                            </span>
                           </div>
                         </div>
                       );
@@ -276,9 +298,7 @@ export function DuplicatesView({ now }: { now: number }) {
       {selected.size > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
           <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-lg">
-            <span className="px-2 text-sm font-medium tabular-nums">
-              {selected.size} to trash
-            </span>
+            <span className="px-2 text-sm font-medium tabular-nums">{selected.size} to trash</span>
             <div className="mx-1 h-5 w-px bg-border" />
             <Button
               size="sm"

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { requireSession } from "@/lib/auth";
-import { emptyTrash, getTrashInfo } from "@/lib/trash";
+import { emptyTrash, getTrashInfo } from "@/lib/storage/trash";
 
 export const dynamic = "force-dynamic";
 

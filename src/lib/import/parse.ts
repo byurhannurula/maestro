@@ -43,9 +43,7 @@ function stripFeat(title: string): string {
 
 /** Drop trailing "- Remaster(ed) [year]" style suffixes (kept: remixes). */
 function stripRemaster(title: string): string {
-  return title
-    .replace(/\s*-\s*(?:\d{4}\s*)?remaster(?:ed)?(?:\s*\d{4})?$/i, "")
-    .trim();
+  return title.replace(/\s*-\s*(?:\d{4}\s*)?remaster(?:ed)?(?:\s*\d{4})?$/i, "").trim();
 }
 
 const collapse = (s: string) => s.replace(/\s+/g, " ").trim();

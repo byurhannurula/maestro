@@ -1,10 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { DiscoveryView } from "@/components/discovery-view";
-import {
-  recommendedMixes,
-  recommendedTracks,
-  similarArtists,
-} from "@/lib/sample-discovery";
+import { recommendedMixes, recommendedTracks, similarArtists } from "@/lib/sample-discovery";
 
 export const metadata = { title: "Discovery · Maestro" };
 

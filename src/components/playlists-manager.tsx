@@ -104,10 +104,7 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
             {pendingId === pl.id ? (
               <div className="flex items-center gap-3">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={deleteSongs}
-                    onCheckedChange={(v) => setDeleteSongs(!!v)}
-                  />
+                  <Checkbox checked={deleteSongs} onCheckedChange={(v) => setDeleteSongs(!!v)} />
                   also delete songs
                 </label>
                 <Button

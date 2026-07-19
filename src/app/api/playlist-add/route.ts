@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { addSongsToPlaylist } from "@/lib/subsonic";
+import { addSongsToPlaylist } from "@/lib/navidrome/subsonic";
 import { isNavidromeConfigured } from "@/lib/env";
-import { bust } from "@/lib/cache";
+import { bust } from "@/lib/storage/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     ? body.songIds.filter((x): x is string => typeof x === "string")
     : [];
   if (!playlistId) return NextResponse.json({ error: "playlistId required" }, { status: 400 });
-  if (songIds.length === 0) return NextResponse.json({ error: "songIds required" }, { status: 400 });
+  if (songIds.length === 0)
+    return NextResponse.json({ error: "songIds required" }, { status: 400 });
 
   await addSongsToPlaylist(playlistId, songIds);
   bust("playlists");

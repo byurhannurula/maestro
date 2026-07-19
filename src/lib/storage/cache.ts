@@ -1,5 +1,5 @@
 import "server-only";
-import { env } from "./env";
+import { env } from "@/lib/env";
 
 /**
  * Small in-process TTL cache for Navidrome reads. A single long-running server

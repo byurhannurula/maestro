@@ -10,6 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -17,7 +20,17 @@
     "docker:run": "docker run --rm -p 4544:4544 --env-file .env maestro:local",
     "release:patch": "npm version patch -m 'release: v%s' && git push --follow-tags",
     "release:minor": "npm version minor -m 'release: v%s' && git push --follow-tags",
-    "release:major": "npm version major -m 'release: v%s' && git push --follow-tags"
+    "release:major": "npm version major -m 'release: v%s' && git push --follow-tags",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs,cjs,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -44,6 +57,10 @@
     "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
