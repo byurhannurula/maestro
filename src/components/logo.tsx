@@ -29,3 +29,18 @@ export function Logo({ size = 32, className }: { size?: number; className?: stri
     </div>
   );
 }
+
+/** Horizontal logo + "Maestro" wordmark. Text uses theme tokens. */
+export function Wordmark({ size = 32, className }: { size?: number; className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-2.5", className)}>
+      <Logo size={size} />
+      <span
+        className="font-bold tracking-tight text-foreground"
+        style={{ fontSize: Math.round(size * 0.7) }}
+      >
+        Maestro
+      </span>
+    </div>
+  );
+}

@@ -26,5 +26,10 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/auth|api/webhook|_next/static|_next/image|favicon.ico|login).*)"],
+  // Exclude better-auth + webhook endpoints, Next internals, the login page, and
+  // the public PWA assets (manifest, icons, logo/wordmark) so they load without a
+  // session — otherwise install prompts and favicons break on the login screen.
+  matcher: [
+    "/((?!api/auth|api/webhook|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|logo|wordmark|login).*)",
+  ],
 };
