@@ -493,7 +493,8 @@ export function SongsTable({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
-      toast.success(`Moved ${data.moved} to trash${data.failed ? `, ${data.failed} failed` : ""}`);
+      const failedNote = data.failed ? `, ${data.failed} failed` : "";
+      toast.success(`Moved ${data.moved} to trash${failedNote}`);
       // Drop only the rows the server actually moved — leave failed ones visible.
       const okIds = new Set<string>(
         (data.results as Array<{ id?: string; ok?: boolean }> | undefined)

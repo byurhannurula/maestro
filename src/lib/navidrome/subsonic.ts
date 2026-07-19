@@ -111,8 +111,10 @@ export async function unstar(id: string): Promise<void> {
   await call("unstar.view", { id });
 }
 
+const UPDATE_PLAYLIST = "updatePlaylist.view";
+
 export async function addToPlaylist(playlistId: string, songId: string): Promise<void> {
-  await call("updatePlaylist.view", { playlistId, songIdToAdd: songId });
+  await call(UPDATE_PLAYLIST, { playlistId, songIdToAdd: songId });
 }
 
 /** Star or unstar many songs in one call. */
@@ -129,7 +131,7 @@ export async function addSongsToPlaylist(playlistId: string, songIds: string[]):
   const params = authParams();
   params.set("playlistId", playlistId);
   for (const id of songIds) params.append("songIdToAdd", id);
-  await request("updatePlaylist.view", params);
+  await request(UPDATE_PLAYLIST, params);
 }
 
 export async function createPlaylist(name: string): Promise<string> {
@@ -211,7 +213,7 @@ export async function removeFromPlaylist(playlistId: string, indices: number[]):
   const params = authParams();
   params.set("playlistId", playlistId);
   for (const idx of indices) params.append("songIndexToRemove", String(idx));
-  await request("updatePlaylist.view", params);
+  await request(UPDATE_PLAYLIST, params);
 }
 
 /** Server-side authed cover-art URL (proxied by /api/cover, never sent to the browser). */

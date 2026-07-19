@@ -37,6 +37,8 @@ const eslintConfig = defineConfig([
       // Next handles module resolution + default exports for pages/routes.
       "import-x/no-unresolved": "off",
       "import-x/no-named-as-default-member": "off",
+      // False positives for genuine default exports (sharp, importX itself).
+      "import-x/no-named-as-default": "off",
 
       // ── Complexity budgets (warn — surfaced, not build-breaking) ────
       complexity: ["warn", 20],
@@ -49,10 +51,14 @@ const eslintConfig = defineConfig([
       "sonarjs/cognitive-complexity": "warn",
       "sonarjs/no-duplicate-string": "warn",
       "sonarjs/no-identical-functions": "warn",
-      "sonarjs/no-nested-conditional": "warn",
       "sonarjs/no-nested-template-literals": "warn",
       "sonarjs/no-nested-functions": "warn",
-      "sonarjs/super-linear-regex": "warn",
+      // Off: nested ternaries are idiomatic in JSX className / value logic here,
+      // so this rule is almost all noise for a React codebase.
+      "sonarjs/no-nested-conditional": "off",
+      // Off: these patterns run only on trusted local input (paste lists, tags,
+      // JSPF), never attacker-controlled — and SonarJS over-flags bounded classes.
+      "sonarjs/super-linear-regex": "off",
       "sonarjs/unused-import": "warn",
       "sonarjs/todo-tag": "warn",
       "sonarjs/no-commented-code": "off",

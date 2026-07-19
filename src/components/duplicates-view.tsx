@@ -121,7 +121,8 @@ export function DuplicatesView({ now }: { now: number }) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`);
-      toast.success(`Moved ${body.moved} to trash${body.failed ? `, ${body.failed} failed` : ""}`);
+      const failedNote = body.failed ? `, ${body.failed} failed` : "";
+      toast.success(`Moved ${body.moved} to trash${failedNote}`);
       setConfirmOpen(false);
 
       // Remove only the copies the server confirmed it moved, from local state.

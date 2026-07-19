@@ -37,7 +37,8 @@ async function raw(method: "GET" | "POST", path: string, body?: unknown): Promis
 
 async function getJson<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const qs = new URLSearchParams(params).toString();
-  const res = await raw("GET", `${path}${qs ? `?${qs}` : ""}`);
+  const query = qs ? `?${qs}` : "";
+  const res = await raw("GET", `${path}${query}`);
   if (!res.ok) throw new Error(`deemix GET ${path} → HTTP ${res.status}`);
   return (await res.json()) as T;
 }

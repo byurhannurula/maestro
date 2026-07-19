@@ -44,6 +44,8 @@ import type { Playlist } from "@/lib/types";
 
 const ACTIVE: JobStatus[] = ["queued", "searching", "downloading", "scanning", "matching"];
 const FAILED: JobStatus[] = ["not_found", "download_failed", "add_failed"];
+const NO_PLAYLIST = "No playlist";
+const IMPORT_URL = "/api/import";
 
 type Filter = "all" | "review" | "failed";
 
@@ -80,7 +82,7 @@ function timeAgo(ms: number): string {
 }
 
 function batchTitle(b: ImportBatch, playlists: Playlist[]): string {
-  return b.playlistName ?? playlists.find((p) => p.id === b.playlistId)?.name ?? "No playlist";
+  return b.playlistName ?? playlists.find((p) => p.id === b.playlistId)?.name ?? NO_PLAYLIST;
 }
 
 function JobStatusLabel({ job }: { job: ImportJob }) {
@@ -115,7 +117,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [target, setTarget] = useState<{ id?: string; name?: string; label: string }>({
-    label: "No playlist",
+    label: NO_PLAYLIST,
   });
   const [batches, setBatches] = useState<ImportBatch[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -154,7 +156,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
 
   async function refresh(): Promise<boolean> {
     try {
-      const res = await fetch("/api/import");
+      const res = await fetch(IMPORT_URL);
       if (!res.ok) return false;
       const data: { batches: ImportBatch[] } = await res.json();
       setBatches(data.batches);
@@ -189,7 +191,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
   }
 
   async function submit(body: { text: string; playlistId?: string; playlistName?: string }) {
-    const res = await fetch("/api/import", {
+    const res = await fetch(IMPORT_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -251,7 +253,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
         const res = await fetch(`/api/import/${confirm.id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } else {
-        const res = await fetch("/api/import", { method: "DELETE" });
+        const res = await fetch(IMPORT_URL, { method: "DELETE" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       }
       await refresh();
@@ -330,7 +332,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
               <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-              <DropdownMenuItem onClick={() => setTarget({ label: "No playlist" })}>
+              <DropdownMenuItem onClick={() => setTarget({ label: NO_PLAYLIST })}>
                 No playlist
               </DropdownMenuItem>
               <DropdownMenuItem
