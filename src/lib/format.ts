@@ -11,6 +11,17 @@ export function formatBytes(bytes: number): string {
   return `${val.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+/** Compact humanised uptime, e.g. "2d 3h", "15m". */
+export function formatUptime(totalSecs: number): string {
+  if (!Number.isFinite(totalSecs) || totalSecs < 1) return "just started";
+  const d = Math.floor(totalSecs / 86_400);
+  const h = Math.floor((totalSecs % 86_400) / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
 export function formatDuration(totalSecs: number): string {
   if (!Number.isFinite(totalSecs) || totalSecs <= 0) return "0:00";
   const m = Math.floor(totalSecs / 60);

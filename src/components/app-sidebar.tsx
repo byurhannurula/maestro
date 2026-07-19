@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import type { Playlist } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,16 @@ export function AppSidebar({
     window.location.assign("/login");
   }
 
+  async function reloadLibrary() {
+    try {
+      await fetch("/api/reload", { method: "POST" });
+    } catch {
+      /* refresh anyway */
+    }
+    router.refresh();
+    toast.success("Library reloaded");
+  }
+
   async function createPlaylist() {
     const name = window.prompt("New playlist name")?.trim();
     if (!name) return;
@@ -82,10 +93,8 @@ export function AppSidebar({
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <ListMusic className="size-4" />
-        </div>
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <Logo size={32} />
         <div className="leading-tight">
           <div className="text-sm font-semibold text-sidebar-foreground">Maestro</div>
           <div className="text-xs text-muted-foreground">library manager</div>
@@ -150,7 +159,7 @@ export function AppSidebar({
               <DropdownMenuItem onClick={() => router.push("/system")}>
                 <Settings className="size-4" /> System
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.refresh()}>
+              <DropdownMenuItem onClick={reloadLibrary}>
                 <RefreshCw className="size-4" /> Reload library
               </DropdownMenuItem>
               <DropdownMenuSeparator />

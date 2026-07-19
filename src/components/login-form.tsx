@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ListMusic, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -51,12 +52,10 @@ export function LoginForm({
 
   return (
     <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div className="mb-6 flex flex-col items-center gap-2 text-center">
-        <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <ListMusic className="size-5" />
-        </div>
+      <div className="mb-6 flex flex-col items-center gap-3 text-center">
+        <Logo size={56} />
         <div>
-          <h1 className="text-lg font-semibold">Maestro</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Maestro</h1>
           <p className="text-sm text-muted-foreground">Sign in to continue</p>
         </div>
       </div>

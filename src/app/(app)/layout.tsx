@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { getLibraryPlaylists } from "@/lib/library";
 import { auth } from "@/lib/auth";
 
@@ -24,6 +25,7 @@ export default async function AppLayout({
     <div className="flex h-full">
       <AppSidebar playlists={playlists} username={displayName} />
       <main className="flex-1 overflow-hidden">{children}</main>
+      <KeyboardShortcuts />
     </div>
   );
 }

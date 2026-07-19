@@ -59,6 +59,28 @@ export async function ping(): Promise<boolean> {
   }
 }
 
+export interface ServerInfo {
+  reachable: boolean;
+  serverVersion?: string;
+  type?: string;
+  apiVersion?: string;
+}
+
+/** Navidrome server version + type, from the ping response (OpenSubsonic). */
+export async function getServerInfo(): Promise<ServerInfo> {
+  try {
+    const sub = await call<{ serverVersion?: string; type?: string; version?: string }>("ping.view");
+    return {
+      reachable: true,
+      serverVersion: sub.serverVersion,
+      type: sub.type,
+      apiVersion: sub.version,
+    };
+  } catch {
+    return { reachable: false };
+  }
+}
+
 interface RawPlaylist {
   id: string;
   name: string;

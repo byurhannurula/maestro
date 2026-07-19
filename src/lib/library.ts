@@ -316,3 +316,47 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     paths: { music: env.MUSIC_DIR, trash: env.TRASH_DIR, database: env.DATABASE_PATH },
   };
 }
+
+export interface LibraryStats {
+  totalTracks: number;
+  favourites: number;
+  neverPlayed: number;
+  playlists: number;
+  playlistTracks: number;
+  playlistDurationSecs: number;
+}
+
+/** Headline counts for the System page. Individual reads are cached. */
+export async function getLibraryStats(): Promise<LibraryStats> {
+  const { playlists } = await getLibraryPlaylists();
+  const plAgg = {
+    playlists: playlists.length,
+    playlistTracks: playlists.reduce((n, p) => n + p.songCount, 0),
+    playlistDurationSecs: playlists.reduce((n, p) => n + p.durationSecs, 0),
+  };
+
+  if (!isNavidromeConfigured) {
+    return {
+      totalTracks: sampleSongs.length,
+      favourites: sampleSongs.filter((s) => s.starred).length,
+      neverPlayed: sampleSongs.filter((s) => s.playCount === 0).length,
+      ...plAgg,
+    };
+  }
+
+  try {
+    const [all, faves, unplayed] = await Promise.all([
+      getSongs({ start: 0, end: 1 }),
+      getSongs({ start: 0, end: 1, starred: true }),
+      fetchNeverPlayed(),
+    ]);
+    return {
+      totalTracks: all.total,
+      favourites: faves.total,
+      neverPlayed: unplayed.length,
+      ...plAgg,
+    };
+  } catch {
+    return { totalTracks: 0, favourites: 0, neverPlayed: 0, ...plAgg };
+  }
+}
