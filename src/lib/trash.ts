@@ -1,5 +1,6 @@
 import "server-only";
-import { access, copyFile, mkdir, rename, unlink } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { access, copyFile, mkdir, readdir, rename, rm, stat, unlink } from "node:fs/promises";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { env } from "./env";
 
@@ -75,4 +76,62 @@ export async function moveToTrash(relPaths: string[]): Promise<MoveResult[]> {
     }
   }
   return results;
+}
+
+export interface TrashInfo {
+  /** Total size of all files under TRASH_DIR, in bytes. */
+  bytes: number;
+  /** Number of files (not directories) under TRASH_DIR. */
+  files: number;
+}
+
+/** Recursively sum file sizes/counts under a directory (missing dir → zeros). */
+async function walk(dir: string): Promise<TrashInfo> {
+  let entries: Dirent[];
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return { bytes: 0, files: 0 };
+  }
+  let bytes = 0;
+  let files = 0;
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      const sub = await walk(p);
+      bytes += sub.bytes;
+      files += sub.files;
+    } else if (e.isFile()) {
+      try {
+        bytes += (await stat(p)).size;
+        files += 1;
+      } catch {
+        /* vanished between readdir and stat — ignore */
+      }
+    }
+  }
+  return { bytes, files };
+}
+
+/** Current size + file count of ./trash. */
+export function getTrashInfo(): Promise<TrashInfo> {
+  return walk(env.TRASH_DIR);
+}
+
+/**
+ * Permanently delete everything inside ./trash (the directory itself is kept).
+ * Only ever removes children of TRASH_DIR. Returns what was freed.
+ */
+export async function emptyTrash(): Promise<TrashInfo> {
+  const freed = await walk(env.TRASH_DIR);
+  let entries: Dirent[];
+  try {
+    entries = await readdir(env.TRASH_DIR, { withFileTypes: true });
+  } catch {
+    return { bytes: 0, files: 0 };
+  }
+  for (const e of entries) {
+    await rm(join(env.TRASH_DIR, e.name), { recursive: true, force: true });
+  }
+  return freed;
 }

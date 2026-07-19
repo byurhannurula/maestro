@@ -1,6 +1,9 @@
 import { CheckCircle2, XCircle, MinusCircle } from "lucide-react";
 import { getSystemStatus } from "@/lib/library";
+import { getTrashInfo } from "@/lib/trash";
+import { formatBytes } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";
+import { EmptyTrashButton } from "@/components/empty-trash-button";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +36,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export default async function SystemPage() {
-  const s = await getSystemStatus();
+  const [s, trash] = await Promise.all([getSystemStatus(), getTrashInfo()]);
   const bool = (b: boolean): State => (b ? "ok" : "bad");
 
   return (
@@ -71,6 +74,21 @@ export default async function SystemPage() {
           <Row label="Music" state="ok" detail={s.paths.music} />
           <Row label="Trash" state="ok" detail={s.paths.trash} />
           <Row label="Database" state="ok" detail={s.paths.database} />
+        </Card>
+
+        <Card title="Trash">
+          <Row label="Size" state="ok" detail={formatBytes(trash.bytes)} />
+          <Row
+            label="Files"
+            state="ok"
+            detail={`${trash.files.toLocaleString()} deleted track${trash.files === 1 ? "" : "s"}`}
+          />
+          <div className="flex items-center justify-between pt-3">
+            <span className="text-xs text-muted-foreground">
+              Deleted files stay here until you empty them.
+            </span>
+            <EmptyTrashButton files={trash.files} bytes={trash.bytes} />
+          </div>
         </Card>
       </div>
     </div>
