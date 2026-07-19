@@ -19,8 +19,14 @@ plus direct file deletion that Navidrome refuses to do — and a name-based impo
   configurable page size, show/hide columns (persisted).
 - **Playlists** — create, open (scoped in All Songs), delete; add/remove tracks; live in the
   sidebar.
-- **Cleanup** — never-played tracks that you didn't just add (the dead weight), for safe bulk
-  deletion. An age cutoff (default 30 days, tunable in the UI) keeps fresh imports off the list.
+- **Discovery** *(mockup)* — recommendations tuned to your library: suggested tracks, similar
+  artists, and ready-made mixes, with one-click queue / send-to-pipeline actions. Currently sample
+  data — the intended feed is [Last.fm](https://www.last.fm/api) / [MusicBrainz](https://musicbrainz.org/)
+  seeded from your top artists, wired into the import pipeline.
+- **Cleanup** — two modes. *Never played*: tracks you didn't just add (the dead weight), with an
+  age cutoff (default 30 days, tunable) that keeps fresh imports off the list. *Duplicates*:
+  groups copies of the same track (normalised artist+title, conservative/aggressive matching),
+  suggests a keeper, and trashes the rest.
 - **Delete → trash** — files move to `./trash` (recoverable), then Navidrome is purge-rescanned.
   Never a hard delete.
 - **System** — health of Navidrome and the download backend, storage paths, and trash size with
