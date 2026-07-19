@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "maestro",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Self-hosted, track-first companion app for a Navidrome library: flat single-track browsing with server-side sort/filter, bulk actions, name-based import through a pluggable download backend, cleanup of never-played tracks, and safe delete-to-trash.",
   "author": "Byurhan Nurula (https://github.com/byurhannurula)",
   "license": "AGPL-3.0-only",
