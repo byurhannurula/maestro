@@ -1,13 +1,7 @@
 import type { Song, SongSortKey } from "@/lib/types";
 
 export type ColId =
-  | "title"
-  | "artist"
-  | "album"
-  | "playCount"
-  | "added"
-  | "lastPlayed"
-  | "duration";
+  "title" | "artist" | "album" | "playCount" | "added" | "lastPlayed" | "duration";
 
 export interface Col {
   id: ColId;
@@ -28,7 +22,14 @@ export const COLUMNS: Col[] = [
 ];
 
 export const TEXT_COLS = new Set<ColId>(["title", "artist", "album"]);
-export const TOGGLEABLE: ColId[] = ["artist", "album", "playCount", "added", "lastPlayed", "duration"];
+export const TOGGLEABLE: ColId[] = [
+  "artist",
+  "album",
+  "playCount",
+  "added",
+  "lastPlayed",
+  "duration",
+];
 export const DEFAULT_DESC: SongSortKey[] = ["playCount", "createdAt", "lastPlayed"];
 
 export const GRID: Record<ColId, string> = {

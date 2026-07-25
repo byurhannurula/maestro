@@ -66,7 +66,9 @@ export function DiscoveryView({
     setRecommended(null);
     setShowAllRec(false);
     try {
-      const data = await apiJson<{ tracks?: DiscoveryTrack[] }>("/api/discovery?recommended=1&refresh=1");
+      const data = await apiJson<{ tracks?: DiscoveryTrack[] }>(
+        "/api/discovery?recommended=1&refresh=1",
+      );
       setRecommended(data.tracks ?? []);
     } catch {
       setRecommended([]);
@@ -77,7 +79,9 @@ export function DiscoveryView({
     setArtists(null);
     setExpandedArtist(null);
     try {
-      const data = await apiJson<{ artists?: DiscoveryArtist[] }>("/api/discovery?artists=1&refresh=1");
+      const data = await apiJson<{ artists?: DiscoveryArtist[] }>(
+        "/api/discovery?artists=1&refresh=1",
+      );
       setArtists(data.artists ?? []);
     } catch {
       setArtists([]);
@@ -150,7 +154,9 @@ export function DiscoveryView({
   }
 
   async function download() {
-    const picked = [...queued.set].map((id) => byId.get(id)).filter((t): t is DiscoveryTrack => !!t);
+    const picked = [...queued.set]
+      .map((id) => byId.get(id))
+      .filter((t): t is DiscoveryTrack => !!t);
     if (picked.length === 0) return;
     setSending(true);
     try {
@@ -407,12 +413,7 @@ export function DiscoveryView({
               {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Download to deemix
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => queued.clear()}
-              disabled={sending}
-            >
+            <Button size="sm" variant="ghost" onClick={() => queued.clear()} disabled={sending}>
               Clear
             </Button>
           </div>

@@ -42,18 +42,21 @@ export function DuplicatesView({ now }: { now: number }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async (m: Match) => {
-    setLoading(true);
-    try {
-      const d = await apiJson<DuplicatesResult>(`/api/duplicates?match=${m}`);
-      setData(d);
-      clearSelected();
-    } catch (e) {
-      toast.error(`Failed to scan duplicates: ${e instanceof Error ? e.message : e}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [clearSelected]);
+  const load = useCallback(
+    async (m: Match) => {
+      setLoading(true);
+      try {
+        const d = await apiJson<DuplicatesResult>(`/api/duplicates?match=${m}`);
+        setData(d);
+        clearSelected();
+      } catch (e) {
+        toast.error(`Failed to scan duplicates: ${e instanceof Error ? e.message : e}`);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clearSelected],
+  );
 
   useEffect(() => {
     // Fetch on mount and whenever the match mode changes.

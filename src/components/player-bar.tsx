@@ -175,11 +175,7 @@ export function PlayerBar({
                 repeat === "off" ? "text-muted-foreground" : "text-primary",
               )}
             >
-              {repeat === "one" ? (
-                <Repeat1 className="size-4" />
-              ) : (
-                <Repeat className="size-4" />
-              )}
+              {repeat === "one" ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
             </button>
           </div>
 

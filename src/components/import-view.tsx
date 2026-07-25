@@ -37,48 +37,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAdaptivePoll } from "@/hooks/use-adaptive-poll";
-import { apiJson, apiPost } from "@/hooks/use-api";
+import { useImportBatches } from "@/hooks/use-import-batches";
 import { timeAgo } from "@/lib/format";
-import { previewTrack } from "@/lib/player-track";
-import { useToggleSet } from "@/hooks/use-toggle-set";
 import { parseImportList, type ParsedLine } from "@/lib/import/parse";
+import {
+  ACTIVE,
+  batchTitle,
+  isFailed,
+  NO_PLAYLIST,
+  summarize,
+  type Counts,
+  type Filter,
+} from "@/lib/import/summarize";
+import { previewTrack } from "@/lib/player-track";
 import { cn } from "@/lib/utils";
-import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import/store";
+import type { ImportBatch, ImportJob } from "@/lib/import/store";
 import type { Playlist } from "@/lib/types";
-
-const ACTIVE: JobStatus[] = ["queued", "searching", "downloading", "scanning", "matching"];
-const FAILED: JobStatus[] = ["not_found", "download_failed", "add_failed"];
-const NO_PLAYLIST = "No playlist";
-const IMPORT_URL = "/api/import";
-
-type Filter = "all" | "review" | "failed";
-
-interface Counts {
-  added: number;
-  review: number;
-  failed: number;
-  skipped: number;
-  active: number;
-}
-
-function summarize(jobs: ImportJob[]): Counts {
-  const c: Counts = { added: 0, review: 0, failed: 0, skipped: 0, active: 0 };
-  for (const j of jobs) {
-    if (j.status === "added") c.added++;
-    else if (j.status === "needs_review") c.review++;
-    else if (j.status === "skipped") c.skipped++;
-    else if (FAILED.includes(j.status)) c.failed++;
-    else c.active++;
-  }
-  return c;
-}
-
-const isFailed = (j: ImportJob) => FAILED.includes(j.status);
-
-function batchTitle(b: ImportBatch, playlists: Playlist[]): string {
-  return b.playlistName ?? playlists.find((p) => p.id === b.playlistId)?.name ?? NO_PLAYLIST;
-}
 
 function JobStatusLabel({ job }: { job: ImportJob }) {
   const s = job.status;
@@ -109,18 +83,28 @@ function JobStatusLabel({ job }: { job: ImportJob }) {
 }
 
 export function ImportView({ playlists }: { playlists: Playlist[] }) {
+  const {
+    active,
+    finished,
+    visibleFinished,
+    stats,
+    filter,
+    setFilter,
+    expanded,
+    confirm,
+    setConfirm,
+    submit,
+    retry,
+    resolve,
+    doConfirm,
+    toggle,
+  } = useImportBatches();
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [target, setTarget] = useState<{ id?: string; name?: string; label: string }>({
     label: NO_PLAYLIST,
   });
-  const [batches, setBatches] = useState<ImportBatch[]>([]);
-  const expanded = useToggleSet<string>();
   const [starting, setStarting] = useState(false);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [confirm, setConfirm] = useState<
-    { kind: "batch"; id: string; label: string } | { kind: "clear"; count: number } | null
-  >(null);
 
   const parsed = useMemo(() => parseImportList(text), [text]);
   const skippedLines = useMemo(() => {
@@ -128,52 +112,12 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
     return Math.max(0, nonEmpty - parsed.length);
   }, [text, parsed.length]);
 
-  const active = batches.filter((b) => !b.done);
-  const finished = batches.filter((b) => b.done);
-
-  // All-time totals across every stored batch.
-  const stats = useMemo(() => {
-    const t = { added: 0, review: 0, failed: 0 };
-    for (const b of batches)
-      for (const j of b.jobs) {
-        if (j.status === "added") t.added++;
-        else if (j.status === "needs_review") t.review++;
-        else if (isFailed(j)) t.failed++;
-      }
-    return t;
-  }, [batches]);
-
-  const visibleFinished = finished.filter((b) => {
-    if (filter === "all") return true;
-    const c = summarize(b.jobs);
-    return filter === "review" ? c.review > 0 : c.failed > 0;
-  });
-
-  async function refresh(): Promise<boolean> {
-    try {
-      const data = await apiJson<{ batches: ImportBatch[] }>(IMPORT_URL);
-      setBatches(data.batches);
-      return data.batches.some((b) => !b.done);
-    } catch {
-      return false;
-    }
-  }
-
-  useAdaptivePoll(refresh, 1500, 6000);
-
   async function onFiles(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
     const content = await file.text();
     setText((prev) => (prev ? `${prev}\n${content}` : content));
     toast.success(`Loaded ${file.name}`);
-  }
-
-  async function submit(body: { text: string; playlistId?: string; playlistName?: string }): Promise<string> {
-    const data = await apiPost<{ batchId: string }>(IMPORT_URL, body);
-    expanded.setSet((prev) => new Set(prev).add(data.batchId));
-    await refresh();
-    return data.batchId;
   }
 
   async function start() {
@@ -187,50 +131,6 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
     } finally {
       setStarting(false);
     }
-  }
-
-  /** Re-run a set of lines as a fresh batch into the original target playlist. */
-  async function retry(lines: string[], b: ImportBatch) {
-    if (lines.length === 0) return;
-    try {
-      await submit({
-        text: lines.join("\n"),
-        playlistId: b.playlistId,
-        playlistName: b.playlistId ? undefined : b.playlistName,
-      });
-      toast.success(`Retrying ${lines.length} track${lines.length === 1 ? "" : "s"}`);
-    } catch (e) {
-      toast.error(`Retry failed: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-
-  async function resolve(batchId: string, jobId: string, action: "pick" | "skip", songId?: string) {
-    try {
-      await apiPost(`/api/import/${batchId}/resolve`, { jobId, action, songId });
-      await refresh();
-    } catch (e) {
-      toast.error(`Action failed: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-
-  async function doConfirm() {
-    if (!confirm) return;
-    try {
-      if (confirm.kind === "batch") {
-        await apiJson(`/api/import/${confirm.id}`, { method: "DELETE" });
-      } else {
-        await apiJson(IMPORT_URL, { method: "DELETE" });
-      }
-      await refresh();
-    } catch (e) {
-      toast.error(`Remove failed: ${e instanceof Error ? e.message : e}`);
-    } finally {
-      setConfirm(null);
-    }
-  }
-
-  function toggle(id: string) {
-    expanded.toggle(id);
   }
 
   return (
@@ -689,7 +589,15 @@ function JobList({
                   {preview && (
                     <button
                       onClick={() =>
-                        player.toggle(previewTrack(job.id, job.title ?? job.line, preview, job.artist, job.deezer?.cover))
+                        player.toggle(
+                          previewTrack(
+                            job.id,
+                            job.title ?? job.line,
+                            preview,
+                            job.artist,
+                            job.deezer?.cover,
+                          ),
+                        )
                       }
                       aria-label={playing ? "Pause preview" : "Play preview"}
                       className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"

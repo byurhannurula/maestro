@@ -13,28 +13,31 @@ export interface CreatePlaylistResult {
 export function useCreatePlaylist() {
   const router = useRouter();
 
-  const createPlaylist = useCallback(async (name?: string): Promise<CreatePlaylistResult | null> => {
-    const resolvedName = name ?? window.prompt("New playlist name")?.trim();
-    if (!resolvedName) return null;
-    try {
-      const data = await apiPost<{ playlists: Array<{ id: string; name: string }> }>(
-        "/api/playlists",
-        { name: resolvedName },
-      );
-      const created = data.playlists.find((p) => p.name === resolvedName);
-      if (!created) {
+  const createPlaylist = useCallback(
+    async (name?: string): Promise<CreatePlaylistResult | null> => {
+      const resolvedName = name ?? window.prompt("New playlist name")?.trim();
+      if (!resolvedName) return null;
+      try {
+        const data = await apiPost<{ playlists: Array<{ id: string; name: string }> }>(
+          "/api/playlists",
+          { name: resolvedName },
+        );
+        const created = data.playlists.find((p) => p.name === resolvedName);
+        if (!created) {
+          toast.success(`Created "${resolvedName}"`);
+          router.refresh();
+          return { id: "", name: resolvedName };
+        }
         toast.success(`Created "${resolvedName}"`);
         router.refresh();
-        return { id: "", name: resolvedName };
+        return { id: created.id, name: created.name };
+      } catch (e) {
+        toast.error(`Create failed: ${e instanceof Error ? e.message : e}`);
+        return null;
       }
-      toast.success(`Created "${resolvedName}"`);
-      router.refresh();
-      return { id: created.id, name: created.name };
-    } catch (e) {
-      toast.error(`Create failed: ${e instanceof Error ? e.message : e}`);
-      return null;
-    }
-  }, [router]);
+    },
+    [router],
+  );
 
   return createPlaylist;
 }

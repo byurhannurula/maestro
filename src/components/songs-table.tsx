@@ -17,9 +17,22 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SongCover } from "@/components/songs-table-cover";
 import { ScrollingText } from "@/components/scrolling-text";
 import { useShortcut, useShortcutHint } from "@/components/shortcuts";
+import {
+  COLUMNS,
+  DEFAULT_DESC,
+  GRID,
+  PAGE_SIZES,
+  RESPONSIVE_HIDE,
+  ROW_HEIGHT,
+  STALE_OPTIONS,
+  TEXT_COLS,
+  TOGGLEABLE,
+  staleLabel,
+  textOf,
+} from "@/components/songs-table-columns";
+import { SongCover } from "@/components/songs-table-cover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,23 +75,7 @@ import {
   toggleHeart,
 } from "@/lib/song-mutations";
 import { cn } from "@/lib/utils";
-import type {
-  Col,
-  ColId,
-} from "@/components/songs-table-columns";
-import {
-  COLUMNS,
-  DEFAULT_DESC,
-  GRID,
-  PAGE_SIZES,
-  RESPONSIVE_HIDE,
-  ROW_HEIGHT,
-  STALE_OPTIONS,
-  TEXT_COLS,
-  TOGGLEABLE,
-  staleLabel,
-  textOf,
-} from "@/components/songs-table-columns";
+import type { Col, ColId } from "@/components/songs-table-columns";
 import type { Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
 
 export function SongsTable({
@@ -237,7 +234,14 @@ export function SongsTable({
 
   async function createPlaylistAndAdd() {
     const result = await createPlaylist();
-    if (result?.id) await addToPlaylist(result.id, result.name, [...selected], () => setSelected(new Set()), () => router.refresh());
+    if (result?.id)
+      await addToPlaylist(
+        result.id,
+        result.name,
+        [...selected],
+        () => setSelected(new Set()),
+        () => router.refresh(),
+      );
   }
 
   function handleBulkFavorite() {
@@ -249,14 +253,27 @@ export function SongsTable({
   }
 
   function handleDelete() {
-    return void deleteSongs([...selected], setDeleting, setSongs, () => setSelected(new Set()), () => setDeleteOpen(false), () => router.refresh());
+    return void deleteSongs(
+      [...selected],
+      setDeleting,
+      setSongs,
+      () => setSelected(new Set()),
+      () => setDeleteOpen(false),
+      () => router.refresh(),
+    );
   }
 
   async function confirmRemove() {
     if (!removeState) return;
     setRemoving(true);
     try {
-      await removeFromPlaylist(removeState.indices, playlistId!, () => setSelected(new Set()), () => router.refresh(), reload);
+      await removeFromPlaylist(
+        removeState.indices,
+        playlistId!,
+        () => setSelected(new Set()),
+        () => router.refresh(),
+        reload,
+      );
       setRemoveState(null);
     } finally {
       setRemoving(false);
@@ -332,7 +349,10 @@ export function SongsTable({
           ),
         )}
         <div className="flex items-center justify-end gap-2 pr-6">
-          <button aria-label={on ? "Unfavorite" : "Favorite"} onClick={() => toggleHeart(s, stars, setStars)}>
+          <button
+            aria-label={on ? "Unfavorite" : "Favorite"}
+            onClick={() => toggleHeart(s, stars, setStars)}
+          >
             <Heart
               className={cn(
                 "size-4 transition-colors",
@@ -568,7 +588,15 @@ export function SongsTable({
                 {playlists.map((pl) => (
                   <DropdownMenuItem
                     key={pl.id}
-                    onClick={() => addToPlaylist(pl.id, pl.name, [...selected], () => setSelected(new Set()), () => router.refresh())}
+                    onClick={() =>
+                      addToPlaylist(
+                        pl.id,
+                        pl.name,
+                        [...selected],
+                        () => setSelected(new Set()),
+                        () => router.refresh(),
+                      )
+                    }
                   >
                     <span className="truncate">{pl.name}</span>
                   </DropdownMenuItem>

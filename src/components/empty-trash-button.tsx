@@ -26,7 +26,9 @@ export function EmptyTrashButton({ files, bytes }: { files: number; bytes: numbe
   async function empty() {
     setBusy(true);
     try {
-      const data = await apiJson<{ bytes: number; files: number }>("/api/trash", { method: "DELETE" });
+      const data = await apiJson<{ bytes: number; files: number }>("/api/trash", {
+        method: "DELETE",
+      });
       toast.success(`Emptied trash — freed ${formatBytes(data.bytes)} (${data.files} files)`);
       setOpen(false);
       router.refresh();
