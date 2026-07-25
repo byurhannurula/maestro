@@ -22,6 +22,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { usePlayer, type PlayerTrack } from "@/components/player-provider";
+import { deleteToTrash } from "@/lib/delete-to-trash";
+import { libraryTrack } from "@/lib/player-track";
 import { ScrollingText } from "@/components/scrolling-text";
 import { useShortcut, useShortcutHint } from "@/components/shortcuts";
 import {
@@ -131,19 +133,6 @@ const RESPONSIVE_HIDE: { maxWidth: number; col: ColId }[] = [
   { maxWidth: 520, col: "artist" },
 ];
 
-/** Map a library Song to a queue entry that streams from Navidrome. */
-function toPlayerTrack(s: Song, starred?: boolean): PlayerTrack {
-  return {
-    id: s.id,
-    title: s.title,
-    artist: s.artist,
-    src: `/api/stream?id=${encodeURIComponent(s.id)}`,
-    coverArt: s.coverArt,
-    starred: starred ?? s.starred,
-    source: "library",
-  };
-}
-
 /** Cover art that doubles as a play/pause button, streaming the song from Navidrome. */
 function Cover({ song, queue, size = 44 }: { song: Song; queue: PlayerTrack[]; size?: number }) {
   const [failed, setFailed] = useState(false);
@@ -153,7 +142,7 @@ function Cover({ song, queue, size = 44 }: { song: Song; queue: PlayerTrack[]; s
 
   return (
     <button
-      onClick={() => player.toggle(toPlayerTrack(song), queue)}
+      onClick={() => player.toggle(libraryTrack(song), queue)}
       aria-label={playing ? `Pause ${song.title}` : `Play ${song.title}`}
       className="group/cover relative shrink-0 overflow-hidden rounded bg-muted"
       style={{ width: size, height: size }}
@@ -297,7 +286,7 @@ export function SongsTable({
 
   // The whole loaded list becomes the player queue (prev/next + autoplay walk it).
   const playerQueue = useMemo(
-    () => songs.map((s) => toPlayerTrack(s, stars[s.id] ?? s.starred)),
+    () => songs.map((s) => libraryTrack(s, stars[s.id] ?? s.starred)),
     [songs, stars],
   );
 
@@ -455,18 +444,13 @@ export function SongsTable({
     if (ids.length === 0) return;
     setDeleting(true);
     try {
-      const data = await apiPost<{ moved: number; failed: number; results: Array<{ id?: string; ok?: boolean }> }>("/api/delete", { ids });
-      const failedNote = data.failed ? `, ${data.failed} failed` : "";
-      toast.success(`Moved ${data.moved} to trash${failedNote}`);
-      const okIds = new Set(
-        (data.results ?? []).filter((r) => r.ok && r.id).map((r) => r.id as string),
-      );
-      setSongs((prev) => prev.filter((s) => !okIds.has(s.id)));
-      setSelected(new Set());
-      setDeleteOpen(false);
-      router.refresh();
-    } catch (e) {
-      toast.error(`Delete failed: ${e instanceof Error ? e.message : e}`);
+      const result = await deleteToTrash(ids);
+      if (result) {
+        setSongs((prev) => prev.filter((s) => !result.okIds.has(s.id)));
+        setSelected(new Set());
+        setDeleteOpen(false);
+        router.refresh();
+      }
     } finally {
       setDeleting(false);
     }

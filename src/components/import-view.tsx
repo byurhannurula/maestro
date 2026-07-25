@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAdaptivePoll } from "@/hooks/use-adaptive-poll";
 import { apiJson, apiPost } from "@/hooks/use-api";
+import { timeAgo } from "@/lib/format";
+import { previewTrack } from "@/lib/player-track";
 import { useToggleSet } from "@/hooks/use-toggle-set";
 import { parseImportList, type ParsedLine } from "@/lib/import/parse";
 import { cn } from "@/lib/utils";
@@ -73,16 +75,6 @@ function summarize(jobs: ImportJob[]): Counts {
 }
 
 const isFailed = (j: ImportJob) => FAILED.includes(j.status);
-
-function timeAgo(ms: number): string {
-  const d = Math.max(0, Date.now() - ms);
-  const m = Math.floor(d / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
 
 function batchTitle(b: ImportBatch, playlists: Playlist[]): string {
   return b.playlistName ?? playlists.find((p) => p.id === b.playlistId)?.name ?? NO_PLAYLIST;
@@ -697,14 +689,7 @@ function JobList({
                   {preview && (
                     <button
                       onClick={() =>
-                        player.toggle({
-                          id: job.id,
-                          title: job.title ?? job.line,
-                          artist: job.artist,
-                          src: `/api/preview?url=${encodeURIComponent(preview)}`,
-                          coverUrl: job.deezer?.cover,
-                          source: "preview",
-                        })
+                        player.toggle(previewTrack(job.id, job.title ?? job.line, preview, job.artist, job.deezer?.cover))
                       }
                       aria-label={playing ? "Pause preview" : "Play preview"}
                       className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"

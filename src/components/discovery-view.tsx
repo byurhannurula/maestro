@@ -22,6 +22,7 @@ import { apiJson } from "@/hooks/use-api";
 import { useToggleSet } from "@/hooks/use-toggle-set";
 import { coverGradient } from "@/lib/cover-gradient";
 import { formatDuration } from "@/lib/format";
+import { previewTrack } from "@/lib/player-track";
 import { cn, errMsg } from "@/lib/utils";
 import type { DiscoveryArtist, DiscoveryPlaylist, DiscoveryTrack } from "@/lib/types";
 
@@ -141,16 +142,7 @@ export function DiscoveryView({
 
   function togglePlay(t: DiscoveryTrack) {
     if (!t.preview) return;
-    // Proxy the Deezer clip through our origin — the CDN blocks direct
-    // cross-origin playback (CORB).
-    player.toggle({
-      id: t.id,
-      title: t.title,
-      artist: t.artist,
-      src: `/api/preview?url=${encodeURIComponent(t.preview)}`,
-      coverUrl: t.cover,
-      source: "preview",
-    });
+    player.toggle(previewTrack(t.id, t.title, t.preview, t.artist, t.cover));
   }
 
   function toggleQueue(t: DiscoveryTrack) {

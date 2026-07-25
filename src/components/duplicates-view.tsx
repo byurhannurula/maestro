@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { apiJson, apiPost } from "@/hooks/use-api";
+import { apiJson } from "@/hooks/use-api";
 import { useToggleSet } from "@/hooks/use-toggle-set";
+import { deleteToTrash } from "@/lib/delete-to-trash";
 import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
 import { pruneGroups } from "@/lib/navidrome/dedupe";
 import { cn } from "@/lib/utils";
@@ -97,32 +98,25 @@ export function DuplicatesView({ now }: { now: number }) {
     if (ids.length === 0) return;
     setDeleting(true);
     try {
-      const body = await apiPost<{ moved: number; failed: number; results: Array<{ id?: string; ok?: boolean }> }>("/api/delete", { ids });
-      const failedNote = body.failed ? `, ${body.failed} failed` : "";
-      toast.success(`Moved ${body.moved} to trash${failedNote}`);
-      setConfirmOpen(false);
+      const result = await deleteToTrash(ids);
+      if (result) {
+        setConfirmOpen(false);
 
-      // Remove only the copies the server confirmed it moved, from local state.
-      // Navidrome's purge-rescan is async, so re-querying now would race it and
-      // the rows would linger; prune optimistically instead.
-      const removedIds = new Set<string>(
-        (body.results as Array<{ id?: string; ok?: boolean }> | undefined)
-          ?.filter((r) => r.ok && r.id)
-          .map((r) => r.id as string) ?? [],
-      );
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              groups: pruneGroups(prev.groups, removedIds),
-              duplicateTracks: prev.duplicateTracks - removedIds.size,
-            }
-          : prev,
-      );
-      clearSelected();
-      router.refresh();
-    } catch (e) {
-      toast.error(`Delete failed: ${e instanceof Error ? e.message : e}`);
+        // Remove only the copies the server confirmed it moved, from local state.
+        // Navidrome's purge-rescan is async, so re-querying now would race it and
+        // the rows would linger; prune optimistically instead.
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                groups: pruneGroups(prev.groups, result.okIds),
+                duplicateTracks: prev.duplicateTracks - result.okIds.size,
+              }
+            : prev,
+        );
+        clearSelected();
+        router.refresh();
+      }
     } finally {
       setDeleting(false);
     }
