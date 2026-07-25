@@ -9,9 +9,6 @@ import {
   ListPlus,
   ListX,
   Loader2,
-  Music,
-  Pause,
-  Play,
   Plus,
   Search,
   SlidersHorizontal,
@@ -20,10 +17,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { usePlayer, type PlayerTrack } from "@/components/player-provider";
-import { deleteToTrash } from "@/lib/delete-to-trash";
-import { libraryTrack } from "@/lib/player-track";
+import { SongCover } from "@/components/songs-table-cover";
 import { ScrollingText } from "@/components/scrolling-text";
 import { useShortcut, useShortcutHint } from "@/components/shortcuts";
 import {
@@ -51,131 +45,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { apiPost } from "@/hooks/use-api";
 import { useCreatePlaylist } from "@/hooks/use-create-playlist";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
 import { usePersistent } from "@/hooks/use-persistent";
+import { useRowSelection } from "@/hooks/use-row-selection";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
 import { formatDuration, relativeTime } from "@/lib/format";
+import { libraryTrack } from "@/lib/player-track";
+import {
+  addSelectedToPlaylist as addToPlaylist,
+  bulkFavorite,
+  bulkRemoveFromPlaylist as bulkRemove,
+  confirmDelete as deleteSongs,
+  removeFromPlaylist,
+  toggleHeart,
+} from "@/lib/song-mutations";
 import { cn } from "@/lib/utils";
+import type {
+  Col,
+  ColId,
+} from "@/components/songs-table-columns";
+import {
+  COLUMNS,
+  DEFAULT_DESC,
+  GRID,
+  PAGE_SIZES,
+  RESPONSIVE_HIDE,
+  ROW_HEIGHT,
+  STALE_OPTIONS,
+  TEXT_COLS,
+  TOGGLEABLE,
+  staleLabel,
+  textOf,
+} from "@/components/songs-table-columns";
 import type { Playlist, Song, SongSortKey, SongsResult } from "@/lib/types";
-
-const PAGE_SIZES = [25, 50, 100, 200, 500];
-const ROW_HEIGHT = 53;
-
-// Cleanup "dead weight" age cutoffs: hide never-played tracks added more
-// recently than this, so fresh imports aren't mistaken for junk.
-const STALE_OPTIONS: { days: number; label: string }[] = [
-  { days: 0, label: "Any age" },
-  { days: 7, label: "Over 7 days" },
-  { days: 30, label: "Over 30 days" },
-  { days: 90, label: "Over 90 days" },
-  { days: 180, label: "Over 6 months" },
-  { days: 365, label: "Over 1 year" },
-];
-const staleLabel = (days: number) =>
-  STALE_OPTIONS.find((o) => o.days === days)?.label ?? `Over ${days} days`;
-
-type ColId = "title" | "artist" | "album" | "playCount" | "added" | "lastPlayed" | "duration";
-
-interface Col {
-  id: ColId;
-  sortKey: SongSortKey | null;
-  label: string;
-  align?: "right";
-  /** Fixed width in px (table-fixed keeps columns stable while virtualized).
-   *  Omit to let the column flex and absorb slack (keeps the layout gap-free). */
-  width?: number;
-}
-
-const COLUMNS: Col[] = [
-  { id: "title", sortKey: "title", label: "Title", width: 240 },
-  { id: "artist", sortKey: "artist", label: "Artist", width: 220 },
-  { id: "album", sortKey: "album", label: "Album", width: 200 },
-  { id: "playCount", sortKey: "playCount", label: "Plays", align: "right", width: 76 },
-  { id: "added", sortKey: "createdAt", label: "Added", align: "right", width: 116 },
-  { id: "lastPlayed", sortKey: "lastPlayed", label: "Last played", align: "right", width: 128 },
-  { id: "duration", sortKey: null, label: "Time", align: "right", width: 66 },
-];
-
-const TEXT_COLS = new Set<ColId>(["title", "artist", "album"]);
-const TOGGLEABLE: ColId[] = ["artist", "album", "playCount", "added", "lastPlayed", "duration"];
-const DEFAULT_DESC: SongSortKey[] = ["playCount", "createdAt", "lastPlayed"];
-
-// CSS-grid tracks: title widest, artist/album medium & equal, stats compact.
-// minmax(0, …fr) lets the flexible columns shrink so text truncates cleanly.
-const GRID: Record<ColId, string> = {
-  title: "minmax(0, 3fr)",
-  artist: "minmax(0, 1.6fr)",
-  album: "minmax(0, 1.6fr)",
-  playCount: "72px",
-  added: "116px",
-  lastPlayed: "128px",
-  duration: "64px",
-};
-
-function textOf(col: Col, s: Song): string {
-  if (col.id === "title") return s.title;
-  if (col.id === "artist") return s.artist;
-  if (col.id === "album") return s.album;
-  return "";
-}
-
-// Progressive column hiding by viewport width — narrower screens shed the
-// least-essential columns first (title always stays). Applied on top of the
-// user's manual View toggles.
-const RESPONSIVE_HIDE: { maxWidth: number; col: ColId }[] = [
-  { maxWidth: 1280, col: "album" },
-  { maxWidth: 1120, col: "added" },
-  { maxWidth: 960, col: "lastPlayed" },
-  { maxWidth: 760, col: "playCount" },
-  { maxWidth: 520, col: "artist" },
-];
-
-/** Cover art that doubles as a play/pause button, streaming the song from Navidrome. */
-function Cover({ song, queue, size = 44 }: { song: Song; queue: PlayerTrack[]; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const player = usePlayer();
-  const active = player.isCurrent(song.id);
-  const playing = active && player.playing;
-
-  return (
-    <button
-      onClick={() => player.toggle(libraryTrack(song), queue)}
-      aria-label={playing ? `Pause ${song.title}` : `Play ${song.title}`}
-      className="group/cover relative shrink-0 overflow-hidden rounded bg-muted"
-      style={{ width: size, height: size }}
-    >
-      {song.coverArt && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/cover?id=${encodeURIComponent(song.coverArt)}&size=${size * 2}`}
-          alt=""
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <Music className="size-4 text-muted-foreground" />
-        </div>
-      )}
-      <span
-        className={cn(
-          "absolute inset-0 flex items-center justify-center bg-black/45 transition-opacity",
-          playing ? "opacity-100" : "opacity-0 group-hover/cover:opacity-100",
-        )}
-      >
-        {playing ? (
-          <Pause className="size-4 fill-white text-white" />
-        ) : (
-          <Play className="size-4 fill-white text-white" />
-        )}
-      </span>
-    </button>
-  );
-}
 
 export function SongsTable({
   initial,
@@ -245,7 +149,6 @@ export function SongsTable({
     });
 
   // Interaction state.
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [stars, setStars] = useState<Record<string, boolean>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -253,8 +156,18 @@ export function SongsTable({
   const [removing, setRemoving] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const shiftDown = useRef(false);
-  const lastIndex = useRef<number | null>(null);
+
+  const { selected, setSelected, selectRow, allSelected, someSelected, selectedSongs } =
+    useRowSelection(songs, {
+      sort,
+      order,
+      search,
+      playlistId,
+      favoritesOnly,
+      unplayedOnly,
+      staleDays,
+      pageSize,
+    });
 
   // Columns forced off by the current viewport width (independent of the user's
   // View menu, which still reflects their explicit preference).
@@ -290,28 +203,6 @@ export function SongsTable({
     [songs, stars],
   );
 
-  // Clear selection whenever the query changes.
-  useEffect(() => {
-    setSelected(new Set());
-    lastIndex.current = null;
-  }, [sort, order, search, playlistId, favoritesOnly, unplayedOnly, staleDays, pageSize]);
-
-  // Track Shift for range selection.
-  useEffect(() => {
-    const d = (e: KeyboardEvent) => {
-      if (e.key === "Shift") shiftDown.current = true;
-    };
-    const u = (e: KeyboardEvent) => {
-      if (e.key === "Shift") shiftDown.current = false;
-    };
-    window.addEventListener("keydown", d);
-    window.addEventListener("keyup", u);
-    return () => {
-      window.removeEventListener("keydown", d);
-      window.removeEventListener("keyup", u);
-    };
-  }, []);
-
   // Virtualize rows so only what's on screen is in the DOM.
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
@@ -338,127 +229,39 @@ export function SongsTable({
     }
   }
 
-  function selectRow(index: number) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (shiftDown.current && lastIndex.current !== null) {
-        const [a, b] =
-          lastIndex.current < index ? [lastIndex.current, index] : [index, lastIndex.current];
-        for (let i = a; i <= b; i++) next.add(songs[i].id);
-      } else {
-        const id = songs[index].id;
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-      }
-      return next;
-    });
-    lastIndex.current = index;
-  }
-
   function toggleColumn(id: ColId) {
     setHiddenCols((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
-
-  async function persistStar(ids: string[], starred: boolean) {
-    await apiPost("/api/star", { ids, starred });
-  }
-
-  function toggleHeart(s: Song) {
-    const current = stars[s.id] ?? s.starred;
-    const next = !current;
-    setStars((prev) => ({ ...prev, [s.id]: next }));
-    persistStar([s.id], next).catch((e) => {
-      setStars((prev) => ({ ...prev, [s.id]: current }));
-      toast.error(`Favourite failed: ${e instanceof Error ? e.message : e}`);
-    });
-  }
-
-  async function bulkFavorite() {
-    const ids = [...selected];
-    setStars((prev) => {
-      const n = { ...prev };
-      ids.forEach((id) => (n[id] = true));
-      return n;
-    });
-    try {
-      await persistStar(ids, true);
-      toast.success(`Favourited ${ids.length}`);
-    } catch (e) {
-      toast.error(`Favourite failed: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-
-  async function addSelectedToPlaylist(id: string, name: string) {
-    const songIds = [...selected];
-    try {
-      await apiPost("/api/playlist-add", { playlistId: id, songIds });
-      toast.success(`Added ${songIds.length} to "${name}"`);
-      setSelected(new Set());
-      router.refresh();
-    } catch (e) {
-      toast.error(`Add failed: ${e instanceof Error ? e.message : e}`);
-    }
   }
 
   const createPlaylist = useCreatePlaylist();
 
   async function createPlaylistAndAdd() {
     const result = await createPlaylist();
-    if (result?.id) await addSelectedToPlaylist(result.id, result.name);
+    if (result?.id) await addToPlaylist(result.id, result.name, [...selected], () => setSelected(new Set()), () => router.refresh());
   }
 
-  async function removeFromPlaylist(indices: number[]) {
-    if (!playlistId || indices.length === 0) return;
-    try {
-      await apiPost("/api/playlist-remove", { playlistId, indices });
-      toast.success(`Removed ${indices.length} from playlist`);
-      setSelected(new Set());
-      router.refresh();
-      reload();
-    } catch (e) {
-      toast.error(`Remove failed: ${e instanceof Error ? e.message : e}`);
-    }
+  function handleBulkFavorite() {
+    return void bulkFavorite([...selected], setStars);
   }
 
-  function bulkRemoveFromPlaylist() {
-    const indices = songs
-      .filter((s) => selected.has(s.id))
-      .map((s) => s.playlistIndex)
-      .filter((n): n is number => n != null);
-    if (indices.length > 0) setRemoveState({ indices, count: indices.length });
+  function handleBulkRemove() {
+    return bulkRemove(songs, selected, setRemoveState);
+  }
+
+  function handleDelete() {
+    return void deleteSongs([...selected], setDeleting, setSongs, () => setSelected(new Set()), () => setDeleteOpen(false), () => router.refresh());
   }
 
   async function confirmRemove() {
     if (!removeState) return;
     setRemoving(true);
     try {
-      await removeFromPlaylist(removeState.indices);
+      await removeFromPlaylist(removeState.indices, playlistId!, () => setSelected(new Set()), () => router.refresh(), reload);
       setRemoveState(null);
     } finally {
       setRemoving(false);
     }
   }
-
-  async function confirmDelete() {
-    const ids = [...selected];
-    if (ids.length === 0) return;
-    setDeleting(true);
-    try {
-      const result = await deleteToTrash(ids);
-      if (result) {
-        setSongs((prev) => prev.filter((s) => !result.okIds.has(s.id)));
-        setSelected(new Set());
-        setDeleteOpen(false);
-        router.refresh();
-      }
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  const allSelected = songs.length > 0 && selected.size === songs.length;
-  const someSelected = selected.size > 0 && !allSelected;
-  const selectedSongs = songs.filter((s) => selected.has(s.id));
 
   function cellContent(col: Col, s: Song) {
     switch (col.id) {
@@ -505,7 +308,7 @@ export function SongsTable({
           />
         </div>
         <div className="flex justify-center">
-          <Cover song={s} queue={playerQueue} />
+          <SongCover song={s} queue={playerQueue} />
         </div>
         {visibleCols.map((col) =>
           col.id === "title" && artistInline ? (
@@ -529,7 +332,7 @@ export function SongsTable({
           ),
         )}
         <div className="flex items-center justify-end gap-2 pr-6">
-          <button aria-label={on ? "Unfavorite" : "Favorite"} onClick={() => toggleHeart(s)}>
+          <button aria-label={on ? "Unfavorite" : "Favorite"} onClick={() => toggleHeart(s, stars, setStars)}>
             <Heart
               className={cn(
                 "size-4 transition-colors",
@@ -765,7 +568,7 @@ export function SongsTable({
                 {playlists.map((pl) => (
                   <DropdownMenuItem
                     key={pl.id}
-                    onClick={() => addSelectedToPlaylist(pl.id, pl.name)}
+                    onClick={() => addToPlaylist(pl.id, pl.name, [...selected], () => setSelected(new Set()), () => router.refresh())}
                   >
                     <span className="truncate">{pl.name}</span>
                   </DropdownMenuItem>
@@ -776,7 +579,7 @@ export function SongsTable({
             <Button
               size="sm"
               variant="ghost"
-              onClick={bulkFavorite}
+              onClick={handleBulkFavorite}
               aria-label="Favourite"
               className="whitespace-nowrap"
             >
@@ -786,7 +589,7 @@ export function SongsTable({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={bulkRemoveFromPlaylist}
+                onClick={handleBulkRemove}
                 aria-label="Remove from playlist"
                 className="whitespace-nowrap"
               >
@@ -849,7 +652,7 @@ export function SongsTable({
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                void confirmDelete();
+                handleDelete();
               }}
               disabled={deleting}
               className="bg-destructive text-white hover:bg-destructive/90"
