@@ -16,9 +16,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { apiJson } from "@/hooks/use-api";
+import { useToggleSet } from "@/hooks/use-toggle-set";
+import { deleteToTrash } from "@/lib/delete-to-trash";
 import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
+import { pruneGroups } from "@/lib/navidrome/dedupe";
 import { cn } from "@/lib/utils";
-import type { DuplicateGroup, DuplicatesResult, Song } from "@/lib/types";
+import type { DuplicatesResult, Song } from "@/lib/types";
 
 type Match = "conservative" | "aggressive";
 
@@ -29,47 +33,30 @@ function quality(s: Song): string {
   return parts.join(" · ") || "—";
 }
 
-/** Drop trashed tracks from the groups, recomputing keeper/reclaimable, and
- *  discard any cluster that no longer has ≥2 copies. */
-function pruneGroups(groups: DuplicateGroup[], removedIds: Set<string>): DuplicateGroup[] {
-  const out: DuplicateGroup[] = [];
-  for (const g of groups) {
-    const members = g.members.filter((m) => !removedIds.has(m.id));
-    if (members.length < 2) continue; // no longer a duplicate
-    const durs = members.map((m) => m.durationSecs);
-    out.push({
-      ...g,
-      members,
-      versionsDiffer: Math.max(...durs) - Math.min(...durs) > 3,
-      reclaimableBytes: members.slice(1).reduce((n, m) => n + (m.sizeBytes ?? 0), 0),
-    });
-  }
-  return out;
-}
-
 export function DuplicatesView({ now }: { now: number }) {
   const router = useRouter();
   const [match, setMatch] = useState<Match>("conservative");
   const [data, setData] = useState<DuplicatesResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { set: selected, setSet: setSelected, clear: clearSelected } = useToggleSet<string>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async (m: Match) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/duplicates?match=${m}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const d: DuplicatesResult = await res.json();
-      setData(d);
-      setSelected(new Set());
-    } catch (e) {
-      toast.error(`Failed to scan duplicates: ${e instanceof Error ? e.message : e}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (m: Match) => {
+      setLoading(true);
+      try {
+        const d = await apiJson<DuplicatesResult>(`/api/duplicates?match=${m}`);
+        setData(d);
+        clearSelected();
+      } catch (e) {
+        toast.error(`Failed to scan duplicates: ${e instanceof Error ? e.message : e}`);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clearSelected],
+  );
 
   useEffect(() => {
     // Fetch on mount and whenever the match mode changes.
@@ -114,38 +101,25 @@ export function DuplicatesView({ now }: { now: number }) {
     if (ids.length === 0) return;
     setDeleting(true);
     try {
-      const res = await fetch("/api/delete", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`);
-      const failedNote = body.failed ? `, ${body.failed} failed` : "";
-      toast.success(`Moved ${body.moved} to trash${failedNote}`);
-      setConfirmOpen(false);
+      const result = await deleteToTrash(ids);
+      if (result) {
+        setConfirmOpen(false);
 
-      // Remove only the copies the server confirmed it moved, from local state.
-      // Navidrome's purge-rescan is async, so re-querying now would race it and
-      // the rows would linger; prune optimistically instead.
-      const removedIds = new Set<string>(
-        (body.results as Array<{ id?: string; ok?: boolean }> | undefined)
-          ?.filter((r) => r.ok && r.id)
-          .map((r) => r.id as string) ?? [],
-      );
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              groups: pruneGroups(prev.groups, removedIds),
-              duplicateTracks: prev.duplicateTracks - removedIds.size,
-            }
-          : prev,
-      );
-      setSelected(new Set());
-      router.refresh();
-    } catch (e) {
-      toast.error(`Delete failed: ${e instanceof Error ? e.message : e}`);
+        // Remove only the copies the server confirmed it moved, from local state.
+        // Navidrome's purge-rescan is async, so re-querying now would race it and
+        // the rows would linger; prune optimistically instead.
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                groups: pruneGroups(prev.groups, result.okIds),
+                duplicateTracks: prev.duplicateTracks - result.okIds.size,
+              }
+            : prev,
+        );
+        clearSelected();
+        router.refresh();
+      }
     } finally {
       setDeleting(false);
     }
@@ -297,7 +271,7 @@ export function DuplicatesView({ now }: { now: number }) {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-[var(--player-bar-offset,1.5rem)] flex justify-center transition-[bottom] duration-200">
           <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-lg">
             <span className="px-2 text-sm font-medium tabular-nums">{selected.size} to trash</span>
             <div className="mx-1 h-5 w-px bg-border" />
@@ -309,7 +283,7 @@ export function DuplicatesView({ now }: { now: number }) {
             >
               <Trash2 className="size-4" /> Move to trash
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+            <Button size="sm" variant="ghost" onClick={() => clearSelected()}>
               Clear
             </Button>
           </div>

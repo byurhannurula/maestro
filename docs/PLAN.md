@@ -14,6 +14,9 @@ Effort: S (<½ day) · M (~1 day) · L (multi-day).
 The Discovery + player + refactor landed without tests on the new critical
 paths. Close that before building more on top.
 
+**Sequencing note:** the Tier-3 file splits (P1) will be much safer _after_ the
+pure modules below exist with tests. Extract first, split second.
+
 - [ ] **Extract + unit-test the new pure logic** (Tier 4 of the refactor). Pure
       functions currently trapped inside `server-only`/I-O modules — pull each to
       a pure module (no `server-only`/`env`) with `__tests__`, mirroring
@@ -34,36 +37,57 @@ paths. Close that before building more on top.
 ## P1 — Finish the refactor (started, ~half done)
 
 Everything here is no-behaviour-change dedupe; verify with lint/typecheck/build.
+Within this tier, the order below matters: correctness fixes first, then the
+highest-leverage quality win (apiJson), then hooks, then mechanical splits.
 
-- [ ] **Tier 2 — adopt the shared helpers everywhere** (created but under-used):
-  - [ ] `apiJson` in the ~15 remaining client fetch sites: `songs-table` (×5),
-        `import-view`, `duplicates-view`, `playlists-manager`, `app-sidebar`,
-        `scan-button`, `empty-trash-button`, `keyboard-shortcuts`. **M**
-  - [ ] `useToggleSet` in `discovery-view` (queue), `import-view` (queue),
-        `duplicates-view` (selection). **S**
-  - [ ] New hooks + adopt: `useDebouncedValue` (songs-table search),
-        `useReload` (sidebar + shortcuts + reload-button), `useCreatePlaylist`
-        (sidebar + playlists-manager + songs-table), `useAdaptivePoll`
-        (import poll). **M**
-  - [ ] Utils: `libraryTrack`/`previewTrack` player-track factories (songs-table
-        / discovery / import), `deleteToTrash()` helper (songs-table +
-        duplicates), fold `import`'s `timeAgo` into `format.ts`. **S**
-  - [ ] `getSongPaths` → use `mapLimit` (currently unbounded `Promise.all`). **S**
-- [ ] **Tier 3 — split the oversized files** (these are the remaining
-      `complexity` / `cognitive-complexity` eslint warnings; treat the warning
-      list as the tracker). Each split is behaviour-preserving:
-  - [ ] `songs-table.tsx` (~980) → `SongCover`, `columns.ts`, dialogs,
-        `SongsToolbar`, `SongsBulkBar`, `useRowSelection`, `useSongMutations`. **L**
-  - [ ] `player-provider.tsx` (~440) → `player-bar.tsx` (UI) vs provider
-        (engine); `usePlaybackEngine`; `<RangeSlider>`. **M**
-  - [ ] `import-view.tsx` (~790) → `useImportBatches()` + move sub-components to
-        `components/import/*`. **M**
-  - [ ] `discovery-view.tsx` (~655) → `useDiscoverySections()`, move
-        `TrackRow`/`TrackList`, consider server-fetching the initial sections. **M**
-  - [ ] `library.ts` (~350) → `library/{songs,insights,system}.ts`. **M**
-- [ ] **Tier 5 — cosmetic**: `<PageShell>` wrapper, `loadSongsPage()` page util,
-      split `types.ts` by domain, align the two `Song` mappers, decide a
-      `runtime` declaration policy. **S–M**
+**Cut a release (`pnpm release:minor`) after P1 lands, not before** — P1 is
+what settles the Discovery/player/webhook code to release quality.
+
+### Tier 2a — correctness (do first)
+
+- [ ] `getSongPaths` → use `mapLimit(ids, 8)` instead of unbounded
+      `Promise.all(ids.map(...))` (currently fires concurrent HTTP requests for
+      every id in a bulk delete). Import from `lib/concurrency.ts`. **S**
+
+### Tier 2b — adopt the shared helpers (highest-leverage quality win)
+
+- [ ] `apiJson` in all remaining client fetch sites (27 raw `fetch()` across 11
+      files — every one is a latent unhandled-reject):
+      `songs-table.tsx` (×5), `import-view.tsx` (×5), `playlists-manager.tsx` (×4),
+      `discovery-view.tsx` (×4), `duplicates-view.tsx` (×2), `app-sidebar.tsx` (×2),
+      `player-provider.tsx`, `scan-button.tsx`, `empty-trash-button.tsx`,
+      `keyboard-shortcuts.tsx`, `reload-button.tsx`. **M**
+- [ ] `useToggleSet` in `discovery-view` (queue), `import-view` (queue),
+      `duplicates-view` (selection). **S**
+- [ ] New hooks + adopt: `useDebouncedValue` (songs-table search),
+      `useReload` (sidebar + shortcuts + reload-button), `useCreatePlaylist`
+      (sidebar + playlists-manager + songs-table), `useAdaptivePoll`
+      (import poll). **M**
+- [ ] Utils: `libraryTrack`/`previewTrack` player-track factories (songs-table
+      / discovery / import), `deleteToTrash()` helper (songs-table +
+      duplicates), fold `timeAgo` from `import-view.tsx` into `format.ts`. **S**
+- [ ] `getSongPaths` per-request error handling: retry on server error before
+      returning `path: null` (avoids false negatives under load). **S**
+
+### Tier 3 — split the oversized files (done after helpers are in so the code
+
+### being split is already clean)
+
+- [ ] `songs-table.tsx` (948) → `SongCover`, `columns.ts`, dialogs,
+      `SongsToolbar`, `SongsBulkBar`, `useRowSelection`, `useSongMutations`. **L**
+- [ ] `player-provider.tsx` (506) → `player-bar.tsx` (UI) vs provider
+      (engine); `usePlaybackEngine`; `<RangeSlider>`. **M**
+- [ ] `import-view.tsx` (792) → `useImportBatches()` + move sub-components to
+      `components/import/*`. **M**
+- [ ] `discovery-view.tsx` (632) → `useDiscoverySections()`, move
+      `TrackRow`/`TrackList`, consider server-fetching the initial sections. **M**
+- [ ] `library.ts` (347) → `library/{songs,insights,system}.ts`. **M**
+
+### Tier 5 — cosmetic (lowest value; do last or skip)
+
+- [ ] `<PageShell>` wrapper, `loadSongsPage()` page util, split `types.ts` by
+      domain, align the two `Song` mappers, decide a `runtime` declaration
+      policy. **S–M**
 
 ## P2 — Feature gaps from the PRD
 
@@ -80,6 +104,9 @@ Everything here is no-behaviour-change dedupe; verify with lint/typecheck/build.
       Subsonic `updatePlaylist` by index. **M**
 - [ ] **Delete safety layers** — scheduled auto-purge after N days + an in-app
       "Recently deleted / Restore" view. **M**
+- [ ] **Spotify import** (roadmap entry added in `docs(agents):` commit) —
+      two-mode: (1) JSON export paste, (2) OAuth playlist URL. JSON mode reuses
+      the existing import pipeline with zero new infra. **L for both modes**
 
 _Dropped by decision:_ in-app auth allowlist/roles (single user; access delegated
 to PocketID).
@@ -107,5 +134,4 @@ to PocketID).
 - Reuse the shared helpers (see AGENTS.md "DRY / KISS"): `withSession`,
   `apiJson`, `getJson`/`postJson`, `errMsg`, `mapLimit`, `trackKey`,
   `coverGradient`, `usePersistent`, `useViewportWidth`.
-- Cut a **release** (`pnpm release:minor`) once Discovery/player/webhook settle —
-  last tag was `v0.5.0`.
+- Cut a **release** (`pnpm release:minor`) once P1 is done — last tag was `v0.5.0`.

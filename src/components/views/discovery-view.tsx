@@ -1,0 +1,458 @@
+"use client";
+
+import {
+  ChevronDown,
+  ChevronRight,
+  Library,
+  Loader2,
+  Music2,
+  RefreshCw,
+  Send,
+  Sparkles,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrackList } from "@/components/views/discovery-track-row";
+import { useDiscovery } from "@/hooks/use-discovery";
+import { coverGradient } from "@/lib/cover-gradient";
+import { cn } from "@/lib/utils";
+import type { DiscoveryArtist, DiscoveryPlaylist, DiscoveryTrack } from "@/lib/types";
+
+export function DiscoveryView({
+  configured,
+  lastfm,
+  playlists,
+}: {
+  configured: boolean;
+  lastfm: boolean;
+  playlists: DiscoveryPlaylist[];
+}) {
+  const {
+    tracksByMbid,
+    loadingMbid,
+    recommended,
+    artists,
+    expandedArtist,
+    artistTracks,
+    loadingArtist,
+    queued,
+    sending,
+    showAllRec,
+    selectedId,
+    setShowAllRec,
+    loadRecommended,
+    loadArtists,
+    selectPlaylist,
+    toggleArtist,
+    download,
+    rowProps,
+  } = useDiscovery({ lastfm });
+
+  if (!configured && !lastfm) {
+    return (
+      <div className="px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-6 text-center">
+          <Music2 className="mx-auto mb-3 size-6 text-muted-foreground" />
+          <h2 className="text-base font-semibold">Discovery isn&apos;t configured yet</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Set <code className="rounded bg-muted px-1">LISTENBRAINZ_USER</code> (weekly mixes)
+            and/or <code className="rounded bg-muted px-1">LASTFM_API_KEY</code> (recommended tracks
+            &amp; artists) to light this up. No extra accounts needed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-full overflow-y-auto">
+      <div className="space-y-8 px-4 pb-28 pt-4 sm:px-6">
+        {configured && playlists.length > 0 && (
+          <MixesSection
+            playlists={playlists}
+            selectedId={selectedId}
+            tracksByMbid={tracksByMbid}
+            loadingMbid={loadingMbid}
+            onSelect={selectPlaylist}
+            rowProps={rowProps}
+          />
+        )}
+
+        {lastfm && (
+          <>
+            <RecommendedSection
+              recommended={recommended}
+              showAllRec={showAllRec}
+              onShowAll={setShowAllRec}
+              onReload={loadRecommended}
+              rowProps={rowProps}
+            />
+            <ArtistsSection
+              artists={artists}
+              expandedArtist={expandedArtist}
+              artistTracks={artistTracks}
+              loadingArtist={loadingArtist}
+              onReload={loadArtists}
+              onToggle={toggleArtist}
+              rowProps={rowProps}
+            />
+          </>
+        )}
+      </div>
+
+      {queued.size > 0 && (
+        <div className="pointer-events-none sticky inset-x-0 bottom-(--player-bar-offset,1.5rem) flex justify-center px-3 transition-[bottom] duration-200">
+          <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-lg">
+            <span className="px-2 text-sm font-medium tabular-nums">{queued.size} selected</span>
+            <div className="mx-1 h-5 w-px bg-border" />
+            <Button size="sm" onClick={download} disabled={sending}>
+              {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              Download to deemix
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => queued.clear()} disabled={sending}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MixesSection({
+  playlists,
+  selectedId,
+  tracksByMbid,
+  loadingMbid,
+  onSelect,
+  rowProps,
+}: {
+  playlists: DiscoveryPlaylist[];
+  selectedId: string;
+  tracksByMbid: Record<string, DiscoveryTrack[]>;
+  loadingMbid: string | null;
+  onSelect: (mbid: string) => void;
+  rowProps: (t: DiscoveryTrack) => {
+    playing: boolean;
+    queued: boolean;
+    onPlay: () => void;
+    onQueue: () => void;
+  };
+}) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Your mixes
+      </h2>
+      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+        {playlists.map((pl) => {
+          const active = pl.mbid === selectedId;
+          const disabled = !pl.available;
+          return (
+            <button
+              key={pl.kind}
+              onClick={() => !disabled && onSelect(pl.mbid)}
+              disabled={disabled}
+              aria-pressed={active}
+              aria-expanded={active}
+              title={disabled ? "Not generated for you yet" : pl.title}
+              className={cn(
+                "group relative flex aspect-square w-52 shrink-0 flex-col justify-between overflow-hidden rounded-xl border p-3 text-left transition-colors",
+                disabled
+                  ? "cursor-default border-border"
+                  : active
+                    ? "border-primary ring-1 ring-primary"
+                    : "border-border hover:border-border/60",
+              )}
+            >
+              <div
+                aria-hidden
+                className={cn(
+                  "absolute inset-0 -z-10 bg-linear-to-br",
+                  disabled
+                    ? "from-muted to-background opacity-70"
+                    : cn("opacity-90", coverGradient(pl.kind)),
+                )}
+              />
+              <div
+                aria-hidden
+                className="absolute inset-0 -z-10 bg-linear-to-t from-black/80 via-black/20 to-black/10"
+              />
+              <span
+                className={cn(
+                  "text-[10px] font-semibold uppercase tracking-wide",
+                  disabled ? "text-muted-foreground" : "text-white/70",
+                )}
+              >
+                ListenBrainz
+              </span>
+              <div>
+                <div
+                  className={cn(
+                    "text-sm font-bold uppercase leading-tight",
+                    disabled ? "text-muted-foreground" : "text-white",
+                  )}
+                >
+                  {pl.kind}
+                </div>
+                <div
+                  className={cn(
+                    "mt-0.5 line-clamp-2 text-[10px]",
+                    disabled ? "text-muted-foreground/70" : "text-white/70",
+                  )}
+                >
+                  {disabled ? "Not generated yet" : pl.subtitle}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedId && (
+        <div className="pt-1">
+          {loadingMbid === selectedId && !tracksByMbid[selectedId] ? (
+            <Loading label="Loading tracks & previews…" />
+          ) : tracksByMbid[selectedId]?.length ? (
+            <TrackList tracks={tracksByMbid[selectedId]} rowProps={rowProps} />
+          ) : (
+            <p className="py-6 text-sm text-muted-foreground">No tracks in this mix.</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RecommendedSection({
+  recommended,
+  showAllRec,
+  onShowAll,
+  onReload,
+  rowProps,
+}: {
+  recommended: DiscoveryTrack[] | null;
+  showAllRec: boolean;
+  onShowAll: (v: boolean | ((prev: boolean) => boolean)) => void;
+  onReload: () => void;
+  rowProps: (t: DiscoveryTrack) => {
+    playing: boolean;
+    queued: boolean;
+    onPlay: () => void;
+    onQueue: () => void;
+  };
+}) {
+  return (
+    <section className="space-y-3">
+      <SectionHeading
+        title="Recommended tracks"
+        hint="Similar to what you play the most"
+        onReload={onReload}
+        reloading={recommended === null}
+      />
+      {recommended === null ? (
+        <Loading label="Finding recommendations…" />
+      ) : recommended.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nothing yet — play a bit more of your library so we have seeds to work from.
+        </p>
+      ) : (
+        <div>
+          <div
+            className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
+            style={{ maxHeight: showAllRec ? recommended.length * 96 + 40 : 360 }}
+          >
+            <TrackList tracks={recommended} rowProps={rowProps} />
+            {!showAllRec && recommended.length > 5 && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-background to-transparent" />
+            )}
+          </div>
+          {recommended.length > 5 && (
+            <div className="flex justify-center pt-2">
+              <ShowMore onClick={() => onShowAll((v) => !v)}>
+                {showAllRec ? "Show less" : `Show all ${recommended.length}`}
+              </ShowMore>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ArtistsSection({
+  artists,
+  expandedArtist,
+  artistTracks,
+  loadingArtist,
+  onReload,
+  onToggle,
+  rowProps,
+}: {
+  artists: DiscoveryArtist[] | null;
+  expandedArtist: string | null;
+  artistTracks: Record<string, DiscoveryTrack[]>;
+  loadingArtist: string | null;
+  onReload: () => void;
+  onToggle: (a: DiscoveryArtist) => void;
+  rowProps: (t: DiscoveryTrack) => {
+    playing: boolean;
+    queued: boolean;
+    onPlay: () => void;
+    onQueue: () => void;
+  };
+}) {
+  return (
+    <section className="space-y-3">
+      <SectionHeading
+        title="Artists to explore"
+        hint="Similar to the artists you own"
+        onReload={onReload}
+        reloading={artists === null}
+      />
+      {artists === null ? (
+        <Loading label="Finding artists…" />
+      ) : artists.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No suggestions yet.</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {artists.map((a) => (
+              <ArtistCard
+                key={a.id}
+                artist={a}
+                expanded={expandedArtist === a.name}
+                onToggle={() => onToggle(a)}
+              />
+            ))}
+          </div>
+
+          {expandedArtist && (
+            <div className="rounded-xl border border-border p-3">
+              <div className="mb-1 text-xs font-medium text-muted-foreground">
+                {expandedArtist} — top tracks
+              </div>
+              {loadingArtist === expandedArtist && !artistTracks[expandedArtist] ? (
+                <Loading label="Loading top tracks…" />
+              ) : artistTracks[expandedArtist]?.length ? (
+                <TrackList tracks={artistTracks[expandedArtist]} rowProps={rowProps} />
+              ) : (
+                <p className="py-4 text-sm text-muted-foreground">No tracks found.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ArtistCard({
+  artist: a,
+  expanded,
+  onToggle,
+}: {
+  artist: DiscoveryArtist;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className={cn(
+        "flex items-center gap-3.5 rounded-xl border bg-card p-4 text-left transition-colors hover:bg-muted/30",
+        expanded ? "border-primary" : "border-border",
+      )}
+    >
+      <div
+        className={cn(
+          "flex size-11 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-base font-semibold text-white/90",
+          coverGradient(a.id),
+        )}
+      >
+        {a.name.charAt(0)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold">{a.name}</div>
+        <div className="truncate text-xs text-muted-foreground">Similar to {a.basedOn}</div>
+        <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
+            {Math.round(a.match * 100)}%
+          </span>
+          {a.inLibrary && (
+            <span className="inline-flex items-center gap-1">
+              <Library className="size-2.5" /> owned
+            </span>
+          )}
+        </div>
+      </div>
+      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+        {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        <Sparkles className="size-3.5" />
+      </span>
+    </button>
+  );
+}
+
+function ShowMore({
+  onClick,
+  className,
+  children,
+}: {
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted hover:text-foreground",
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SectionHeading({
+  title,
+  hint,
+  onReload,
+  reloading,
+}: {
+  title: string;
+  hint: string;
+  onReload?: () => void;
+  reloading?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-baseline gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h2>
+        <span className="hidden text-xs text-muted-foreground/70 sm:inline">{hint}</span>
+      </div>
+      {onReload && (
+        <button
+          onClick={onReload}
+          disabled={reloading}
+          title="Show a different batch"
+          aria-label="Shuffle"
+          className="ml-auto rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          <RefreshCw className={cn("size-4", reloading && "animate-spin")} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Loading({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" /> {label}
+    </div>
+  );
+}

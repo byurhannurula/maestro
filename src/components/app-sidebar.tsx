@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useState } from "react";
-import { toast } from "sonner";
+import { Suspense, useCallback } from "react";
 import { Logo } from "@/components/logo";
 import { ScrollingText } from "@/components/scrolling-text";
 import { useShortcut, useShortcutHint } from "@/components/shortcuts";
@@ -33,6 +32,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCreatePlaylist } from "@/hooks/use-create-playlist";
+import { useReload } from "@/hooks/use-reload";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
 import type { Playlist } from "@/lib/types";
@@ -59,7 +60,8 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
   const pathname = usePathname();
   const router = useRouter();
   const { collapsed, toggle, setCollapsed } = useSidebar();
-  const [reloading, setReloading] = useState(false);
+  const { reload: reloadLibrary, reloading } = useReload();
+  const createPlaylist = useCreatePlaylist();
   const settingsHint = useShortcutHint("open-settings");
   const reloadHint = useShortcutHint("reload");
 
@@ -80,36 +82,6 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
   async function signOut() {
     await authClient.signOut();
     window.location.assign("/login");
-  }
-
-  async function reloadLibrary() {
-    if (reloading) return;
-    setReloading(true);
-    try {
-      await fetch("/api/reload", { method: "POST" });
-    } catch {
-      /* refresh anyway */
-    }
-    router.refresh();
-    toast.success("Library reloaded");
-    setReloading(false);
-  }
-
-  async function createPlaylist() {
-    const name = window.prompt("New playlist name")?.trim();
-    if (!name) return;
-    try {
-      const res = await fetch("/api/playlists", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast.success(`Created "${name}"`);
-      router.refresh();
-    } catch (e) {
-      toast.error(`Create failed: ${e instanceof Error ? e.message : e}`);
-    }
   }
 
   return (
@@ -181,7 +153,7 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
                   <RefreshCw className={cn("size-4", reloading && "animate-spin")} />
                 </button>
                 <button
-                  onClick={createPlaylist}
+                  onClick={() => void createPlaylist()}
                   aria-label="New playlist"
                   title="New playlist"
                   className="text-muted-foreground transition-colors hover:text-foreground"

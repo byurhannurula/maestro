@@ -96,32 +96,22 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
         timer.current = null;
       }
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        clearLeader();
-        return;
-      }
-      const specs = [...map.current.values()];
-
-      // Second key of a leader sequence.
-      if (leader.current) {
-        const lead = leader.current;
-        clearLeader();
-        if (isTyping(e.target)) return;
-        for (const s of specs) {
-          const tokens = s.combo.split(" ");
-          if (tokens.length === 2 && tokens[0].toLowerCase() === lead && matchToken(e, tokens[1])) {
-            if (s.preventDefault !== false) e.preventDefault();
-            s.run(e);
-            return;
-          }
+    function handleSecondKey(e: KeyboardEvent, specs: ShortcutSpec[]) {
+      const lead = leader.current;
+      clearLeader();
+      if (isTyping(e.target)) return;
+      for (const s of specs) {
+        const tokens = s.combo.split(" ");
+        if (tokens.length === 2 && tokens[0].toLowerCase() === lead && matchToken(e, tokens[1])) {
+          if (s.preventDefault !== false) e.preventDefault();
+          s.run(e);
+          return true;
         }
-        return;
       }
+      return false;
+    }
 
-      const typing = isTyping(e.target);
-
-      // Single-token shortcuts.
+    function handleSingleKey(e: KeyboardEvent, specs: ShortcutSpec[], typing: boolean) {
       for (const s of specs) {
         const tokens = s.combo.split(" ");
         if (tokens.length !== 1) continue;
@@ -129,23 +119,39 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
         if (matchToken(e, tokens[0])) {
           if (s.preventDefault !== false) e.preventDefault();
           s.run(e);
-          return;
+          return true;
         }
       }
+      return false;
+    }
 
-      // Start a leader sequence if this key opens one.
-      if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const leaders = new Set(
-          specs
-            .map((s) => s.combo.split(" "))
-            .filter((t) => t.length === 2)
-            .map((t) => t[0].toLowerCase()),
-        );
-        if (leaders.has(e.key.toLowerCase())) {
-          leader.current = e.key.toLowerCase();
-          timer.current = setTimeout(clearLeader, LEADER_TIMEOUT_MS);
-        }
+    function tryStartLeader(e: KeyboardEvent, specs: ShortcutSpec[], typing: boolean) {
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      const leaders = new Set(
+        specs
+          .map((s) => s.combo.split(" "))
+          .filter((t) => t.length === 2)
+          .map((t) => t[0].toLowerCase()),
+      );
+      if (leaders.has(e.key.toLowerCase())) {
+        leader.current = e.key.toLowerCase();
+        timer.current = setTimeout(clearLeader, LEADER_TIMEOUT_MS);
       }
+    }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        clearLeader();
+        return;
+      }
+      const specs = [...map.current.values()];
+      if (leader.current) {
+        handleSecondKey(e, specs);
+        return;
+      }
+      const typing = isTyping(e.target);
+      if (handleSingleKey(e, specs, typing)) return;
+      tryStartLeader(e, specs, typing);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

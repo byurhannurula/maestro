@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import {
   comboKeys,
   useRegisterShortcuts,
   useShortcutList,
   type ShortcutSpec,
 } from "@/components/shortcuts";
+import { useReload } from "@/hooks/use-reload";
 
 /** Order groups appear in the help sheet. */
 const GROUP_ORDER = ["Navigation", "View", "Actions", "Help"];
@@ -24,15 +24,7 @@ export function KeyboardShortcuts() {
   const { resolvedTheme, setTheme } = useTheme();
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const reload = useCallback(async () => {
-    try {
-      await fetch("/api/reload", { method: "POST" });
-    } catch {
-      /* refresh anyway */
-    }
-    router.refresh();
-    toast.success("Library reloaded");
-  }, [router]);
+  const { reload } = useReload();
 
   const specs: ShortcutSpec[] = [
     {

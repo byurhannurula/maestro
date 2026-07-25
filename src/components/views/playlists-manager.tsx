@@ -7,6 +7,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { apiJson, apiPost } from "@/hooks/use-api";
+import { useCreatePlaylist } from "@/hooks/use-create-playlist";
 import { formatDuration } from "@/lib/format";
 import type { Playlist } from "@/lib/types";
 
@@ -15,50 +17,23 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [deleteSongs, setDeleteSongs] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  async function create() {
-    const name = window.prompt("New playlist name")?.trim();
-    if (!name) return;
-    try {
-      const res = await fetch("/api/playlists", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast.success(`Created "${name}"`);
-      router.refresh();
-    } catch (e) {
-      toast.error(`Create failed: ${e instanceof Error ? e.message : e}`);
-    }
-  }
+  const create = useCreatePlaylist();
 
   async function confirmDelete(pl: Playlist) {
     setBusy(true);
     try {
       let trashed = 0;
       if (deleteSongs) {
-        // Move the playlist's files to ./trash before removing the playlist.
-        const scoped = await fetch(
+        const scoped = await apiJson<{ songs?: { id?: string }[] }>(
           `/api/songs?playlist=${encodeURIComponent(pl.id)}&start=0&end=2000`,
-        ).then((r) => r.json());
-        const ids: string[] = (scoped.songs ?? [])
-          .map((s: { id?: string }) => s.id)
-          .filter((x: string | undefined): x is string => !!x);
+        );
+        const ids = (scoped.songs ?? []).map((s) => s.id).filter((x): x is string => !!x);
         if (ids.length > 0) {
-          // Delete by id so the server resolves the real physical path.
-          const del = await fetch("/api/delete", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ids }),
-          });
-          trashed = (await del.json().catch(() => ({})))?.moved ?? 0;
+          const del = await apiPost<{ moved?: number }>("/api/delete", { ids });
+          trashed = del?.moved ?? 0;
         }
       }
-      const res = await fetch(`/api/playlists?id=${encodeURIComponent(pl.id)}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await apiJson(`/api/playlists?id=${encodeURIComponent(pl.id)}`, { method: "DELETE" });
       toast.success(
         deleteSongs
           ? `Deleted "${pl.name}" and trashed ${trashed} songs`
@@ -77,7 +52,7 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <Button onClick={create}>
+        <Button onClick={() => void create()}>
           <Plus className="size-4" /> New playlist
         </Button>
       </div>

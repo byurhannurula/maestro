@@ -1,6 +1,7 @@
 import "server-only";
 import { env } from "@/lib/env";
 import { getJson as httpJson, trimSlash } from "@/lib/http";
+import { mbidFrom, parseAndDedupePlaylists } from "@/lib/listenbrainz/parse";
 
 /**
  * ListenBrainz client — public read endpoints only (no API key needed). We use
@@ -12,8 +13,6 @@ import { getJson as httpJson, trimSlash } from "@/lib/http";
  */
 
 const base = () => trimSlash(env.LISTENBRAINZ_URL);
-
-const MBID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 export interface LbPlaylistMeta {
   mbid: string;
@@ -27,38 +26,6 @@ export interface LbTrack {
   artist: string;
   recordingMbid?: string;
   durationSecs?: number;
-}
-
-/** A JSPF `identifier` may be a string or string[]; pull the first MBID out. */
-function mbidFrom(identifier: unknown): string {
-  const url = Array.isArray(identifier) ? identifier[0] : identifier;
-  if (typeof url !== "string") return "";
-  return url.match(MBID_RE)?.[0] ?? "";
-}
-
-// Preferred display order; anything else keeps its natural (newest) order after.
-const PRIORITY = ["weekly exploration", "weekly jams", "daily jams"];
-
-/** Playlist "kind" = the title minus the "… for {user}, week of …" suffix,
- *  so the distinct mixes (Weekly Exploration, Daily Jams, …) each collapse to
- *  one card across their historical weeks. */
-function cleanKind(title: string): string {
-  const base = title.split(/\s+for\s+/i)[0].trim();
-  return base || "Recommended";
-}
-
-/** Sort key: newest first, from the playlist date or a "week of YYYY-MM-DD" title. */
-function dateOf(date: unknown, title: string): number {
-  if (typeof date === "string") {
-    const d = Date.parse(date);
-    if (!Number.isNaN(d)) return d;
-  }
-  const m = title.match(/week of (\d{4}-\d{2}-\d{2})/i);
-  if (m) {
-    const d = Date.parse(m[1]);
-    if (!Number.isNaN(d)) return d;
-  }
-  return 0;
 }
 
 const getJson = (path: string): Promise<unknown> => httpJson(`${base()}${path}`);
@@ -76,38 +43,7 @@ export async function getRecommendationPlaylists(): Promise<LbPlaylistMeta[]> {
   )) as {
     playlists?: Array<{ playlist?: { identifier?: unknown; title?: unknown; date?: unknown } }>;
   };
-
-  const items = Array.isArray(data.playlists) ? data.playlists : [];
-  const parsed = items
-    .map((it) => {
-      const pl = it.playlist ?? {};
-      const title = typeof pl.title === "string" ? pl.title : "Recommended";
-      return {
-        mbid: mbidFrom(pl.identifier),
-        title,
-        kind: cleanKind(title),
-        date: dateOf(pl.date, title),
-      };
-    })
-    .filter((p) => p.mbid)
-    .sort((a, b) => b.date - a.date);
-
-  // Newest of each distinct mix (collapses historical weekly copies).
-  const seen = new Set<string>();
-  const out: LbPlaylistMeta[] = [];
-  for (const p of parsed) {
-    const k = p.kind.toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push({ mbid: p.mbid, title: p.title, kind: p.kind });
-  }
-  // Known recurring mixes first, the rest keep newest-first order.
-  out.sort((a, b) => {
-    const ia = PRIORITY.indexOf(a.kind.toLowerCase());
-    const ib = PRIORITY.indexOf(b.kind.toLowerCase());
-    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-  });
-  return out.slice(0, 8);
+  return parseAndDedupePlaylists(Array.isArray(data.playlists) ? data.playlists : []);
 }
 
 /** The tracks of a playlist (JSPF). */

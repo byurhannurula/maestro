@@ -22,7 +22,7 @@ export interface LfTrack {
 }
 
 /** Last.fm returns a single result as an object, many as an array. */
-function asArray<T>(x: unknown): T[] {
+export function asArray<T>(x: unknown): T[] {
   if (Array.isArray(x)) return x as T[];
   return x ? [x as T] : [];
 }

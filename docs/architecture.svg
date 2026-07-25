@@ -1,0 +1,199 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="ah-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="ah-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ea580c"/>
+    </marker>
+    <marker id="ah-p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9333ea"/>
+    </marker>
+    <marker id="ah-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <rect width="1040" height="700" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="520" y="30" text-anchor="middle" font-size="20" font-weight="700" fill="#0f172a">Maestro — architecture &amp; data flow</text>
+  <text x="520" y="50" text-anchor="middle" font-size="12" fill="#64748b">track-first manager over Navidrome + deemix</text>
+
+  <!-- ===== ROW 1: inputs ===== -->
+  <g id="inputs">
+    <rect x="40" y="74" width="300" height="68" rx="8" fill="#f8fafc" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="190" y="98" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">Browser / phone</text>
+    <text x="190" y="117" text-anchor="middle" font-size="11" fill="#475569">paste / drop · All Songs · Cleanup</text>
+    <text x="190" y="132" text-anchor="middle" font-size="11" fill="#475569">Discovery · Settings (PWA)</text>
+
+    <rect x="370" y="74" width="300" height="68" rx="8" fill="#f8fafc" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="520" y="98" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">Shazam → iOS Shortcut</text>
+    <text x="520" y="117" text-anchor="middle" font-size="11" fill="#475569">POST /api/webhook/import</text>
+    <text x="520" y="132" text-anchor="middle" font-size="11" fill="#475569">auth: WEBHOOK_SECRET (no session)</text>
+
+    <rect x="700" y="74" width="300" height="68" rx="8" fill="#f8fafc" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="850" y="98" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">PocketID (OIDC)</text>
+    <text x="850" y="117" text-anchor="middle" font-size="11" fill="#475569">+ break-glass admin (env-seeded)</text>
+    <text x="850" y="132" text-anchor="middle" font-size="11" fill="#475569">public sign-up off</text>
+  </g>
+
+  <!-- arrows inputs -> Maestro -->
+  <line x1="190" y1="142" x2="190" y2="184" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="520" y1="142" x2="520" y2="184" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="850" y1="142" x2="850" y2="184" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah-b)"/>
+
+  <!-- ===== ROW 2: Maestro (center) ===== -->
+  <g id="maestro">
+    <rect x="260" y="186" width="520" height="262" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>
+    <text x="520" y="210" text-anchor="middle" font-size="16" font-weight="700" fill="#14532d">Maestro  ·  Next.js 16 · TypeScript</text>
+
+    <!-- Import worker -->
+    <rect x="282" y="228" width="232" height="100" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+    <text x="398" y="248" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Import worker</text>
+    <text x="398" y="266" text-anchor="middle" font-size="11" fill="#475569">in-process, sequential</text>
+    <text x="398" y="282" text-anchor="middle" font-size="11" fill="#475569">deemix delay (rate-limit)</text>
+    <text x="398" y="298" text-anchor="middle" font-size="11" fill="#475569">no BullMQ / Redis</text>
+    <text x="398" y="318" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="600">needs_review picker</text>
+
+    <!-- Discovery -->
+    <rect x="526" y="228" width="232" height="100" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+    <text x="642" y="248" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Discovery</text>
+    <text x="642" y="266" text-anchor="middle" font-size="11" fill="#475569">ListenBrainz playlists</text>
+    <text x="642" y="282" text-anchor="middle" font-size="11" fill="#475569">Last.fm recos / similar</text>
+    <text x="642" y="298" text-anchor="middle" font-size="11" fill="#475569">Deezer 30s preview</text>
+    <text x="642" y="318" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="600">one-click → import</text>
+
+    <!-- Auth -->
+    <rect x="282" y="340" width="232" height="100" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+    <text x="398" y="360" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Auth (better-auth)</text>
+    <text x="398" y="378" text-anchor="middle" font-size="11" fill="#475569">3 layers: proxy / layout / route</text>
+    <text x="398" y="394" text-anchor="middle" font-size="11" fill="#475569">PocketID OAuth + admin</text>
+    <text x="398" y="410" text-anchor="middle" font-size="11" fill="#475569">node:sqlite (Node 24)</text>
+    <text x="398" y="430" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="600">requireSession everywhere</text>
+
+    <!-- Cache -->
+    <rect x="526" y="340" width="232" height="100" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+    <text x="642" y="360" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">In-mem cache (TTL)</text>
+    <text x="642" y="378" text-anchor="middle" font-size="11" fill="#475569">Navidrome reads · 24h</text>
+    <text x="642" y="394" text-anchor="middle" font-size="11" fill="#475569">busted on any mutation</text>
+    <text x="642" y="410" text-anchor="middle" font-size="11" fill="#475569">cached() / bust("songs")</text>
+    <text x="642" y="430" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="600">not Next revalidateTag</text>
+  </g>
+
+  <!-- ===== LEFT col: upstream ===== -->
+  <g id="upstream">
+    <rect x="20" y="186" width="222" height="104" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+    <text x="131" y="210" text-anchor="middle" font-size="14" font-weight="700" fill="#7c2d12">Navidrome</text>
+    <text x="131" y="228" text-anchor="middle" font-size="11" fill="#9a3412">Subsonic /rest/*  — stable</text>
+    <text x="131" y="243" text-anchor="middle" font-size="10" fill="#9a3412">search · star · playlists · scan</text>
+    <text x="131" y="263" text-anchor="middle" font-size="11" fill="#9a3412">Native /api/*  — unstable</text>
+    <text x="131" y="278" text-anchor="middle" font-size="10" fill="#9a3412">flat list · real file paths</text>
+
+    <rect x="20" y="304" width="222" height="68" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+    <text x="131" y="326" text-anchor="middle" font-size="14" font-weight="700" fill="#7c2d12">deemix (REST)</text>
+    <text x="131" y="344" text-anchor="middle" font-size="11" fill="#9a3412">loginArl · search · addToQueue</text>
+    <text x="131" y="360" text-anchor="middle" font-size="10" fill="#9a3412">queue single tracks only (no dupes)</text>
+
+    <rect x="20" y="386" width="222" height="62" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+    <text x="131" y="408" text-anchor="middle" font-size="13" font-weight="700" fill="#7c2d12">Discovery feeds (public)</text>
+    <text x="131" y="425" text-anchor="middle" font-size="10" fill="#9a3412">ListenBrainz · Last.fm · Deezer</text>
+    <text x="131" y="440" text-anchor="middle" font-size="10" fill="#9a3412">no API keys (Last.fm key read-only)</text>
+  </g>
+
+  <!-- arrows Maestro -> upstream (left) -->
+  <line x1="260" y1="238" x2="244" y2="238" stroke="#ea580c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+  <line x1="260" y1="338" x2="244" y2="338" stroke="#ea580c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+  <line x1="260" y1="417" x2="244" y2="417" stroke="#ea580c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+
+  <!-- ===== RIGHT col: storage ===== -->
+  <g id="storage">
+    <rect x="798" y="186" width="222" height="58" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="909" y="208" text-anchor="middle" font-size="13" font-weight="700" fill="#581c87">./music</text>
+    <text x="909" y="226" text-anchor="middle" font-size="10" fill="#6b21a8">rw · shared with Navidrome · deletes move out</text>
+
+    <rect x="798" y="254" width="222" height="58" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="909" y="276" text-anchor="middle" font-size="13" font-weight="700" fill="#581c87">./trash</text>
+    <text x="909" y="294" text-anchor="middle" font-size="10" fill="#6b21a8">sibling dir · recoverable · one-click empty</text>
+
+    <rect x="798" y="322" width="222" height="58" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="909" y="344" text-anchor="middle" font-size="13" font-weight="700" fill="#581c87">SQLite (auth)</text>
+    <text x="909" y="362" text-anchor="middle" font-size="10" fill="#6b21a8">users · sessions · accounts · /data/maestro.db</text>
+
+    <rect x="798" y="390" width="222" height="58" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="909" y="412" text-anchor="middle" font-size="13" font-weight="700" fill="#581c87">imports.json</text>
+    <text x="909" y="430" text-anchor="middle" font-size="10" fill="#6b21a8">batch history mirror · in-mem + JSON</text>
+  </g>
+
+  <!-- arrows Maestro -> storage (right) -->
+  <line x1="780" y1="215" x2="796" y2="215" stroke="#9333ea" stroke-width="1.5" marker-end="url(#ah-p)"/>
+  <line x1="780" y1="283" x2="796" y2="283" stroke="#9333ea" stroke-width="1.5" marker-end="url(#ah-p)"/>
+  <line x1="780" y1="351" x2="796" y2="351" stroke="#9333ea" stroke-width="1.5" marker-end="url(#ah-p)"/>
+  <line x1="780" y1="419" x2="796" y2="419" stroke="#9333ea" stroke-width="1.5" marker-end="url(#ah-p)"/>
+
+  <!-- ===== Pipeline strip ===== -->
+  <text x="520" y="490" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Import pipeline (per line)</text>
+
+  <g id="pipeline" font-size="11" fill="#0f172a">
+    <!-- 7 steps, x = 40 + i*143, width 130, gap 13 -->
+    <rect x="40"  y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="105" y="528" text-anchor="middle" font-weight="600">1 · parse</text>
+    <text x="105" y="545" text-anchor="middle" font-size="10" fill="#475569">Artist - Title</text>
+
+    <rect x="183" y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="248" y="528" text-anchor="middle" font-weight="600">2 · search</text>
+    <text x="248" y="545" text-anchor="middle" font-size="10" fill="#475569">Deezer</text>
+
+    <rect x="326" y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="391" y="528" text-anchor="middle" font-weight="600">3 · queue</text>
+    <text x="391" y="545" text-anchor="middle" font-size="10" fill="#475569">deemix</text>
+
+    <rect x="469" y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="534" y="528" text-anchor="middle" font-weight="600">4 · download</text>
+    <text x="534" y="545" text-anchor="middle" font-size="10" fill="#475569">wait for drain</text>
+
+    <rect x="612" y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="677" y="528" text-anchor="middle" font-weight="600">5 · scan</text>
+    <text x="677" y="545" text-anchor="middle" font-size="10" fill="#475569">Navidrome</text>
+
+    <rect x="755" y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="820" y="528" text-anchor="middle" font-weight="600">6 · match</text>
+    <text x="820" y="545" text-anchor="middle" font-size="10" fill="#475569">search3</text>
+
+    <rect x="898" y="506" width="130" height="56" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+    <text x="963" y="528" text-anchor="middle" font-weight="600">7 · add</text>
+    <text x="963" y="545" text-anchor="middle" font-size="10" fill="#475569">→ playlist</text>
+
+    <!-- arrows between steps -->
+    <line x1="170" y1="534" x2="183" y2="534" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+    <line x1="313" y1="534" x2="326" y2="534" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+    <line x1="456" y1="534" x2="469" y2="534" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+    <line x1="599" y1="534" x2="612" y2="534" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+    <line x1="742" y1="534" x2="755" y2="534" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+    <line x1="885" y1="534" x2="898" y2="534" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+  </g>
+
+  <!-- Delete flow note -->
+  <text x="520" y="596" text-anchor="middle" font-size="12" font-weight="600" fill="#dc2626">Delete flow:  select → confirm (paths shown) → move to ./trash → Navidrome purge-rescan</text>
+  <text x="520" y="614" text-anchor="middle" font-size="11" fill="#475569">path-traversal guarded by safeRelPath (unit-tested) · never a hard delete · every destructive action confirmed</text>
+
+  <!-- Legend -->
+  <g id="legend" font-size="10" fill="#475569">
+    <text x="40" y="652" font-weight="600" fill="#0f172a">Legend:</text>
+    <line x1="92" y1="649" x2="118" y2="649" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah-b)"/>
+    <text x="124" y="652">control / auth</text>
+    <line x1="214" y1="649" x2="240" y2="649" stroke="#16a34a" stroke-width="1.5" marker-end="url(#ah-g)"/>
+    <text x="246" y="652">Maestro internal</text>
+    <line x1="346" y1="649" x2="372" y2="649" stroke="#ea580c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+    <text x="378" y="652">upstream API</text>
+    <line x1="458" y1="649" x2="484" y2="649" stroke="#9333ea" stroke-width="1.5" marker-end="url(#ah-p)"/>
+    <text x="490" y="652">local storage</text>
+    <line x1="572" y1="649" x2="598" y2="649" stroke="#64748b" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="604" y="652">pipeline step</text>
+  </g>
+
+  <text x="520" y="685" text-anchor="middle" font-size="10" fill="#94a3b8">No DB server · no Redis · no job queue — single Node 24 process (Tauri-wrap later)</text>
+</svg>

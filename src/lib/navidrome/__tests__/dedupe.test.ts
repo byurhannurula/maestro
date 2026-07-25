@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { buildDuplicateGroups, keeperCompare, normArtist, normTitle } from "@/lib/navidrome/dedupe";
-import type { Song } from "@/lib/types";
+import {
+  buildDuplicateGroups,
+  keeperCompare,
+  normArtist,
+  normTitle,
+  pruneGroups,
+  trackKey,
+} from "@/lib/navidrome/dedupe";
+import type { DuplicateGroup, Song } from "@/lib/types";
 
 function song(p: Partial<Song> & { id: string }): Song {
   return {
@@ -17,11 +24,20 @@ function song(p: Partial<Song> & { id: string }): Song {
 describe("normArtist", () => {
   it("lowercases and folds diacritics", () => {
     expect(normArtist("Beyoncé")).toBe("beyonce");
+    expect(normArtist("Mötley Crüe")).toBe("motley crue");
   });
   it("keeps only the primary artist, dropping feat/collab tails", () => {
     expect(normArtist("Kanye West feat. Pusha T")).toBe("kanye west");
     expect(normArtist("A, B")).toBe("a");
     expect(normArtist("A & B")).toBe("a");
+    expect(normArtist("A / B")).toBe("a");
+  });
+  it("handles 'ft.' and 'featuring' variants", () => {
+    expect(normArtist("Artist ft. Guest")).toBe("artist");
+    expect(normArtist("Artist featuring Guest")).toBe("artist");
+  });
+  it("collapses whitespace", () => {
+    expect(normArtist("  Extra   Spaces  ")).toBe("extra spaces");
   });
 });
 
@@ -29,14 +45,41 @@ describe("normTitle", () => {
   it("strips feat clauses (parenthetical and trailing)", () => {
     expect(normTitle("Runaway (feat. Pusha T)", false)).toBe("runaway");
     expect(normTitle("Runaway feat. Pusha T", false)).toBe("runaway");
+    expect(normTitle("Runaway (ft. Guest) [explicit]", false)).toBe("runaway explicit");
   });
   it("keeps remixes/versions distinct in conservative mode", () => {
     expect(normTitle("IDGAF", false)).not.toBe(normTitle("IDGAF (Remix)", false));
+    expect(normTitle("Song (Live)", false)).not.toBe(normTitle("Song (Studio)", false));
   });
   it("aggressive folds remaster/radio-edit but never remix", () => {
     expect(normTitle("Song (Remastered 2011)", true)).toBe("song");
     expect(normTitle("Song (Radio Edit)", true)).toBe("song");
     expect(normTitle("Song (Remix)", true)).toBe("song remix");
+    expect(normTitle("Song - Deluxe Edition", true)).toBe("song");
+    expect(normTitle("Song - Mono Version", true)).toBe("song");
+  });
+  it("strips dashes before qualifiers in aggressive mode", () => {
+    expect(normTitle("Song - 2023 Remaster", true)).toBe("song");
+  });
+  it("preserves non-qualifier parenthetical content", () => {
+    expect(normTitle("Song (Original Mix)", false)).toBe("song original mix");
+  });
+  it("does not strip content after '--' (double dash not in pattern)", () => {
+    const result = normTitle("Song -- Extra", true);
+    expect(result).toBe("song extra");
+  });
+});
+
+describe("trackKey", () => {
+  it("joins normalized artist and title with the separator", () => {
+    const key = trackKey("Beyoncé", "Halo (Remix)");
+    expect(key).toBe("beyonce␟halo remix");
+  });
+
+  it("uses conservative normalization (no remix folding)", () => {
+    const withRemix = trackKey("Artist", "Song (Remix)");
+    const without = trackKey("Artist", "Song");
+    expect(withRemix).not.toBe(without);
   });
 });
 
@@ -72,5 +115,41 @@ describe("buildDuplicateGroups", () => {
     const res = buildDuplicateGroups(songs, false, "navidrome");
     expect(res.groups[0].members[0].id).toBe("keep");
     expect(res.groups[0].reclaimableBytes).toBe(700);
+  });
+});
+
+describe("pruneGroups", () => {
+  function group(overrides: Partial<DuplicateGroup> = {}): DuplicateGroup {
+    return {
+      key: "artist␟title",
+      artist: "Artist",
+      title: "Title",
+      members: [
+        song({ id: "1", album: "A", bitRate: 320, sizeBytes: 10_000_000 }),
+        song({ id: "2", album: "B", bitRate: 256, sizeBytes: 8_000_000 }),
+        song({ id: "3", album: "C", bitRate: 192, sizeBytes: 6_000_000 }),
+      ],
+      versionsDiffer: false,
+      reclaimableBytes: 14_000_000,
+      ...overrides,
+    };
+  }
+
+  it("removes specified ids and recomputes reclaimableBytes", () => {
+    const g = group();
+    const result = pruneGroups([g], new Set(["2"]));
+    expect(result).toHaveLength(1);
+    expect(result[0].members.map((m) => m.id)).toEqual(["1", "3"]);
+    expect(result[0].reclaimableBytes).toBe(6_000_000);
+  });
+
+  it("drops a group when fewer than 2 copies remain", () => {
+    const g = group();
+    const result = pruneGroups([g], new Set(["1", "2"]));
+    expect(result).toHaveLength(0);
+  });
+
+  it("handles empty input", () => {
+    expect(pruneGroups([], new Set())).toEqual([]);
   });
 });

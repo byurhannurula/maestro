@@ -1,8 +1,8 @@
-import { CleanupTabs } from "@/components/cleanup-tabs";
-import { DuplicatesView } from "@/components/duplicates-view";
 import { PageHeader } from "@/components/page-header";
-import { SongsTable } from "@/components/songs-table";
 import { SourceBanner } from "@/components/source-banner";
+import { SongsTable } from "@/components/tables/songs-table";
+import { CleanupTabs } from "@/components/views/cleanup-tabs";
+import { DuplicatesView } from "@/components/views/duplicates-view";
 import { env } from "@/lib/env";
 import { nowMs } from "@/lib/format";
 import { getLibrarySongs, getLibraryPlaylists } from "@/lib/navidrome/library";
