@@ -15,7 +15,7 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { usePlayer } from "@/components/player-provider";
 import {
@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAdaptivePoll } from "@/hooks/use-adaptive-poll";
 import { apiJson, apiPost } from "@/hooks/use-api";
 import { useToggleSet } from "@/hooks/use-toggle-set";
 import { parseImportList, type ParsedLine } from "@/lib/import/parse";
@@ -166,21 +167,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
     }
   }
 
-  // Self-scheduling poll: fast while something runs, slow when idle.
-  useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = async () => {
-      if (!alive) return;
-      const running = await refresh();
-      timer = setTimeout(tick, running ? 1500 : 6000);
-    };
-    void tick();
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, []);
+  useAdaptivePoll(refresh, 1500, 6000);
 
   async function onFiles(files: FileList | null) {
     const file = files?.[0];

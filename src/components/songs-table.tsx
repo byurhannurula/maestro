@@ -50,6 +50,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { apiPost } from "@/hooks/use-api";
+import { useCreatePlaylist } from "@/hooks/use-create-playlist";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
 import { usePersistent } from "@/hooks/use-persistent";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
@@ -213,7 +215,7 @@ export function SongsTable({
   const [sort, setSort] = useState<SongSortKey>(defaultSort);
   const [order, setOrder] = useState<"ASC" | "DESC">(defaultOrder);
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const search = useDebouncedValue(searchInput, 350);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchHint = useShortcutHint("focus-search");
@@ -298,12 +300,6 @@ export function SongsTable({
     () => songs.map((s) => toPlayerTrack(s, stars[s.id] ?? s.starred)),
     [songs, stars],
   );
-
-  // Debounce the search box.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput), 350);
-    return () => clearTimeout(t);
-  }, [searchInput]);
 
   // Clear selection whenever the query changes.
   useEffect(() => {
@@ -415,16 +411,11 @@ export function SongsTable({
     }
   }
 
+  const createPlaylist = useCreatePlaylist();
+
   async function createPlaylistAndAdd() {
-    const name = window.prompt("New playlist name")?.trim();
-    if (!name) return;
-    try {
-      const data = await apiPost<{ playlists: Playlist[] }>("/api/playlists", { name });
-      const created = data.playlists.find((p) => p.name === name);
-      if (created) await addSelectedToPlaylist(created.id, name);
-    } catch (e) {
-      toast.error(`Create failed: ${e instanceof Error ? e.message : e}`);
-    }
+    const result = await createPlaylist();
+    if (result?.id) await addSelectedToPlaylist(result.id, result.name);
   }
 
   async function removeFromPlaylist(indices: number[]) {

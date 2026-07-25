@@ -52,7 +52,7 @@ export function DuplicatesView({ now }: { now: number }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clearSelected]);
 
   useEffect(() => {
     // Fetch on mount and whenever the match mode changes.

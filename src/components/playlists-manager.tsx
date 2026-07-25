@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiJson, apiPost } from "@/hooks/use-api";
+import { useCreatePlaylist } from "@/hooks/use-create-playlist";
 import { formatDuration } from "@/lib/format";
 import type { Playlist } from "@/lib/types";
 
@@ -16,18 +17,7 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [deleteSongs, setDeleteSongs] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  async function create() {
-    const name = window.prompt("New playlist name")?.trim();
-    if (!name) return;
-    try {
-      await apiPost("/api/playlists", { name });
-      toast.success(`Created "${name}"`);
-      router.refresh();
-    } catch (e) {
-      toast.error(`Create failed: ${e instanceof Error ? e.message : e}`);
-    }
-  }
+  const create = useCreatePlaylist();
 
   async function confirmDelete(pl: Playlist) {
     setBusy(true);
@@ -62,7 +52,7 @@ export function PlaylistsManager({ playlists }: { playlists: Playlist[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <Button onClick={create}>
+        <Button onClick={() => void create()}>
           <Plus className="size-4" /> New playlist
         </Button>
       </div>

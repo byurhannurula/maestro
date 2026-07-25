@@ -1,10 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
-import { apiPost } from "@/hooks/use-api";
+import { useReload } from "@/hooks/use-reload";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,31 +10,20 @@ import { cn } from "@/lib/utils";
  * always visible in the page header for when cached data looks stale.
  */
 export function ReloadButton() {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-
-  async function reload() {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await apiPost("/api/reload");
-    } catch {
-      /* refresh anyway */
-    }
-    router.refresh();
-    toast.success("Cache cleared & reloaded");
-    setBusy(false);
-  }
+  const { reload, reloading } = useReload();
 
   return (
     <button
       onClick={reload}
-      disabled={busy}
-      title="Clear cache & reload (r)"
-      aria-label="Clear cache and reload"
-      className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+      disabled={reloading}
+      className={cn(
+        "flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground",
+        reloading && "pointer-events-none opacity-50",
+      )}
+      aria-label="Reload library"
     >
-      <RefreshCw className={cn("size-4", busy && "animate-spin")} />
+      <RefreshCw className={cn("size-3.5", reloading && "animate-spin")} />
+      {reloading ? "Reloading…" : "Reload"}
     </button>
   );
 }
