@@ -2,13 +2,13 @@
 
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { usePlayer } from "@/components/player-provider";
-import { isFailed } from "@/lib/import/summarize";
+import { ACTIVE, isFailed } from "@/lib/import/summarize";
 import { previewTrack } from "@/lib/player-track";
 import type { ImportBatch, ImportJob } from "@/lib/import/store";
 
 function JobStatusLabel({ job }: { job: ImportJob }) {
   const s = job.status;
-  if (["pending", "running", "resolving"].includes(s))
+  if (ACTIVE.includes(s))
     return <span className="inline-flex items-center gap-1.5 text-xs text-blue-300">{s}</span>;
   if (s === "added")
     return <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400">added</span>;
