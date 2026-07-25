@@ -7,7 +7,8 @@
 
 <p align="center">
   A self-hosted, <strong>track-first</strong> companion for a
-  <a href="https://www.navidrome.org/">Navidrome</a> library — a <strong>manager, not a player</strong>.
+  <a href="https://www.navidrome.org/">Navidrome</a> library — a <strong>manager first</strong>,
+  with a built-in player for previews &amp; quick listens.
 </p>
 
 <p align="center">
