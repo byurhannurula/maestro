@@ -139,6 +139,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [volume, muted]);
 
+  // Publish the mini-bar's presence as a CSS var so any floating action bar can
+  // sit above it (`bottom-[var(--player-bar-offset,1.5rem)]`) without each view
+  // having to consume the player context just for layout.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (current) root.style.setProperty("--player-bar-offset", "5.25rem");
+    else root.style.removeProperty("--player-bar-offset");
+    return () => {
+      root.style.removeProperty("--player-bar-offset");
+    };
+  }, [current]);
+
   // Load + autoplay whenever the *track identity* changes (not on pause/resume).
   useEffect(() => {
     const a = audioRef.current;

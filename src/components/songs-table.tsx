@@ -793,7 +793,7 @@ export function SongsTable({
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-(--player-bar-offset,1.5rem) flex justify-center px-3 transition-[bottom] duration-200">
           <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-border bg-card px-2 py-2 shadow-lg sm:gap-2 sm:px-3">
             <span className="whitespace-nowrap px-1 text-sm font-medium tabular-nums sm:px-2">
               {selected.size}
@@ -877,7 +877,7 @@ export function SongsTable({
         <button
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Scroll to top"
-          className="absolute bottom-6 right-6 z-20 flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-lg transition-colors hover:bg-muted hover:text-foreground"
+          className="absolute right-6 bottom-(--player-bar-offset,1.5rem) z-20 flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-lg transition-[bottom,background-color,color] duration-200 hover:bg-muted hover:text-foreground"
         >
           <ArrowUp className="size-4" />
         </button>
