@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { usePlayer } from "@/components/player-provider";
 import { Button } from "@/components/ui/button";
 import { apiJson } from "@/hooks/use-api";
+import { useToggleSet } from "@/hooks/use-toggle-set";
 import { coverGradient } from "@/lib/cover-gradient";
 import { formatDuration } from "@/lib/format";
 import { cn, errMsg } from "@/lib/utils";
@@ -43,7 +44,7 @@ export function DiscoveryView({
   const [artistTracks, setArtistTracks] = useState<Record<string, DiscoveryTrack[]>>({});
   const [loadingArtist, setLoadingArtist] = useState<string | null>(null);
 
-  const [queued, setQueued] = useState<Set<string>>(new Set());
+  const queued = useToggleSet<string>();
   const [sending, setSending] = useState(false);
   const [showAllRec, setShowAllRec] = useState(false);
   const player = usePlayer();
@@ -153,23 +154,18 @@ export function DiscoveryView({
   }
 
   function toggleQueue(t: DiscoveryTrack) {
-    setQueued((prev) => {
-      const next = new Set(prev);
-      if (next.has(t.id)) next.delete(t.id);
-      else next.add(t.id);
-      return next;
-    });
+    queued.toggle(t.id);
   }
 
   async function download() {
-    const picked = [...queued].map((id) => byId.get(id)).filter((t): t is DiscoveryTrack => !!t);
+    const picked = [...queued.set].map((id) => byId.get(id)).filter((t): t is DiscoveryTrack => !!t);
     if (picked.length === 0) return;
     setSending(true);
     try {
       const text = picked.map((t) => `${t.artist} - ${t.title}`).join("\n");
       await apiJson("/api/import", { method: "POST", body: JSON.stringify({ text }) });
       toast.success(`Sent ${picked.length} to deemix — track it on the Import page.`);
-      setQueued(new Set());
+      queued.clear();
     } catch (e) {
       toast.error(`Download failed: ${errMsg(e)}`);
     } finally {
@@ -179,7 +175,7 @@ export function DiscoveryView({
 
   const rowProps = (t: DiscoveryTrack) => ({
     playing: player.isCurrent(t.id) && player.playing,
-    queued: queued.has(t.id),
+    queued: queued.set.has(t.id),
     onPlay: () => togglePlay(t),
     onQueue: () => toggleQueue(t),
   });
@@ -422,7 +418,7 @@ export function DiscoveryView({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setQueued(new Set())}
+              onClick={() => queued.clear()}
               disabled={sending}
             >
               Clear

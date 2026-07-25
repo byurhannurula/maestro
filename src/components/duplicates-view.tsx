@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiJson, apiPost } from "@/hooks/use-api";
+import { useToggleSet } from "@/hooks/use-toggle-set";
 import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
 import { pruneGroups } from "@/lib/navidrome/dedupe";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ export function DuplicatesView({ now }: { now: number }) {
   const [match, setMatch] = useState<Match>("conservative");
   const [data, setData] = useState<DuplicatesResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { set: selected, setSet: setSelected, clear: clearSelected } = useToggleSet<string>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -45,7 +46,7 @@ export function DuplicatesView({ now }: { now: number }) {
     try {
       const d = await apiJson<DuplicatesResult>(`/api/duplicates?match=${m}`);
       setData(d);
-      setSelected(new Set());
+      clearSelected();
     } catch (e) {
       toast.error(`Failed to scan duplicates: ${e instanceof Error ? e.message : e}`);
     } finally {
@@ -118,7 +119,7 @@ export function DuplicatesView({ now }: { now: number }) {
             }
           : prev,
       );
-      setSelected(new Set());
+      clearSelected();
       router.refresh();
     } catch (e) {
       toast.error(`Delete failed: ${e instanceof Error ? e.message : e}`);
@@ -285,7 +286,7 @@ export function DuplicatesView({ now }: { now: number }) {
             >
               <Trash2 className="size-4" /> Move to trash
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+            <Button size="sm" variant="ghost" onClick={() => clearSelected()}>
               Clear
             </Button>
           </div>

@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiJson, apiPost } from "@/hooks/use-api";
+import { useToggleSet } from "@/hooks/use-toggle-set";
 import { parseImportList, type ParsedLine } from "@/lib/import/parse";
 import { cn } from "@/lib/utils";
 import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import/store";
@@ -121,7 +122,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
     label: NO_PLAYLIST,
   });
   const [batches, setBatches] = useState<ImportBatch[]>([]);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const expanded = useToggleSet<string>();
   const [starting, setStarting] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [confirm, setConfirm] = useState<
@@ -191,7 +192,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
 
   async function submit(body: { text: string; playlistId?: string; playlistName?: string }): Promise<string> {
     const data = await apiPost<{ batchId: string }>(IMPORT_URL, body);
-    setExpanded((s) => new Set(s).add(data.batchId));
+    expanded.setSet((prev) => new Set(prev).add(data.batchId));
     await refresh();
     return data.batchId;
   }
@@ -250,12 +251,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
   }
 
   function toggle(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    expanded.toggle(id);
   }
 
   return (
@@ -434,7 +430,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
           <div className="flex flex-col gap-2">
             {visibleFinished.map((b) => {
               const c = summarize(b.jobs);
-              const isOpen = filter !== "all" || expanded.has(b.id);
+              const isOpen = filter !== "all" || expanded.set.has(b.id);
               const only =
                 filter === "review"
                   ? (j: ImportJob) => j.status === "needs_review"
