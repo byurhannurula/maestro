@@ -7,7 +7,7 @@ import { apiJson } from "@/hooks/use-api";
 import { useToggleSet } from "@/hooks/use-toggle-set";
 import { previewTrack } from "@/lib/player-track";
 import { errMsg } from "@/lib/utils";
-import type { DiscoveryArtist, DiscoveryPlaylist, DiscoveryTrack } from "@/lib/types";
+import type { DiscoveryArtist, DiscoveryTrack } from "@/lib/types";
 
 export function useDiscovery({ lastfm }: { lastfm: boolean }) {
   const [selectedId, setSelectedId] = useState<string>("");

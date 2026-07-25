@@ -37,41 +37,34 @@ async function uniqueDest(dest: string): Promise<string> {
   return `${base}.${Date.now()}${ext}`;
 }
 
-export async function moveToTrash(relPaths: string[]): Promise<MoveResult[]> {
-  const results: MoveResult[] = [];
-  for (const rel of relPaths) {
-    const src = safeSource(rel);
-    if (!src) {
-      results.push({ path: rel, ok: false, error: "invalid path" });
-      continue;
-    }
-    if (!(await exists(src))) {
-      // Not under this music root — likely a second Navidrome library that
-      // isn't mounted here. Report honestly instead of a misleading success.
-      results.push({ path: rel, ok: false, error: "file not found under MUSIC_DIR" });
-      continue;
-    }
-    try {
-      const destRel = relative(env.MUSIC_DIR, src);
-      const dest = await uniqueDest(join(env.TRASH_DIR, destRel));
-      await mkdir(dirname(dest), { recursive: true });
-      try {
-        await rename(src, dest);
-      } catch (e) {
-        // /music and /trash may be different mounts → rename fails cross-device.
-        if ((e as NodeJS.ErrnoException).code === "EXDEV") {
-          await copyFile(src, dest);
-          await unlink(src);
-        } else {
-          throw e;
-        }
-      }
-      results.push({ path: rel, ok: true });
-    } catch (e) {
-      results.push({ path: rel, ok: false, error: e instanceof Error ? e.message : String(e) });
-    }
+async function moveOneFile(rel: string): Promise<MoveResult> {
+  const src = safeSource(rel);
+  if (!src) return { path: rel, ok: false, error: "invalid path" };
+  if (!(await exists(src))) {
+    return { path: rel, ok: false, error: "file not found under MUSIC_DIR" };
   }
-  return results;
+  try {
+    const destRel = relative(env.MUSIC_DIR, src);
+    const dest = await uniqueDest(join(env.TRASH_DIR, destRel));
+    await mkdir(dirname(dest), { recursive: true });
+    try {
+      await rename(src, dest);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "EXDEV") {
+        await copyFile(src, dest);
+        await unlink(src);
+      } else {
+        throw e;
+      }
+    }
+    return { path: rel, ok: true };
+  } catch (e) {
+    return { path: rel, ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function moveToTrash(relPaths: string[]): Promise<MoveResult[]> {
+  return Promise.all(relPaths.map(moveOneFile));
 }
 
 export interface TrashInfo {

@@ -126,58 +126,18 @@ export function PlayerBar({
 
         {/* ── Center: transport + seek ───────────────────────────── */}
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onToggleShuffle}
-              aria-label="Shuffle"
-              aria-pressed={shuffle}
-              title="Shuffle"
-              className={cn(
-                "hidden rounded-md p-1.5 transition-colors hover:text-foreground sm:block",
-                shuffle ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              <Shuffle className="size-4" />
-            </button>
-            <button
-              onClick={onPrev}
-              disabled={!hasPrev}
-              aria-label="Previous"
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-            >
-              <SkipBack className="size-4 fill-current" />
-            </button>
-            <button
-              onClick={onTogglePlay}
-              aria-label={playing ? "Pause" : "Play"}
-              className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105"
-            >
-              {playing ? (
-                <Pause className="size-4 fill-current" />
-              ) : (
-                <Play className="size-4 translate-x-px fill-current" />
-              )}
-            </button>
-            <button
-              onClick={onNext}
-              disabled={!hasNext}
-              aria-label="Next"
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-            >
-              <SkipForward className="size-4 fill-current" />
-            </button>
-            <button
-              onClick={onCycleRepeat}
-              aria-label={`Repeat: ${repeat}`}
-              title={`Repeat: ${repeat}`}
-              className={cn(
-                "hidden rounded-md p-1.5 transition-colors hover:text-foreground sm:block",
-                repeat === "off" ? "text-muted-foreground" : "text-primary",
-              )}
-            >
-              {repeat === "one" ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
-            </button>
-          </div>
+          <TransportControls
+            playing={playing}
+            shuffle={shuffle}
+            repeat={repeat}
+            hasNext={hasNext}
+            hasPrev={hasPrev}
+            onTogglePlay={onTogglePlay}
+            onToggleShuffle={onToggleShuffle}
+            onCycleRepeat={onCycleRepeat}
+            onNext={onNext}
+            onPrev={onPrev}
+          />
 
           <span className="hidden w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:block">
             {formatDuration(Math.floor(time))}
@@ -244,5 +204,84 @@ export function PlayerBar({
         </div>
       </div>
     </div>
+  );
+}
+
+function TransportControls({
+  playing,
+  shuffle,
+  repeat,
+  hasNext,
+  hasPrev,
+  onTogglePlay,
+  onToggleShuffle,
+  onCycleRepeat,
+  onNext,
+  onPrev,
+}: {
+  playing: boolean;
+  shuffle: boolean;
+  repeat: Repeat;
+  hasNext: boolean;
+  hasPrev: boolean;
+  onTogglePlay: () => void;
+  onToggleShuffle: () => void;
+  onCycleRepeat: () => void;
+  onNext: () => void;
+  onPrev: () => void;
+}) {
+  return (
+    <span className="flex items-center gap-1">
+      <button
+        onClick={onToggleShuffle}
+        aria-label="Shuffle"
+        aria-pressed={shuffle}
+        title="Shuffle"
+        className={cn(
+          "hidden rounded-md p-1.5 transition-colors hover:text-foreground sm:block",
+          shuffle ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        <Shuffle className="size-4" />
+      </button>
+      <button
+        onClick={onPrev}
+        disabled={!hasPrev}
+        aria-label="Previous"
+        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+      >
+        <SkipBack className="size-4 fill-current" />
+      </button>
+      <button
+        onClick={onTogglePlay}
+        aria-label={playing ? "Pause" : "Play"}
+        className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105"
+      >
+        {playing ? (
+          <Pause className="size-4 fill-current" />
+        ) : (
+          <Play className="size-4 translate-x-px fill-current" />
+        )}
+      </button>
+      <button
+        onClick={onNext}
+        disabled={!hasNext}
+        aria-label="Next"
+        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+      >
+        <SkipForward className="size-4 fill-current" />
+      </button>
+      <button
+        onClick={onCycleRepeat}
+        aria-label={`Repeat: ${repeat}`}
+        title={`Repeat: ${repeat}`}
+        className={cn(
+          "hidden rounded-md p-1.5 transition-colors hover:text-foreground sm:block",
+          repeat === "off" ? "text-muted-foreground" : "text-primary",
+        )}
+      >
+        {repeat === "one" ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
+      </button>
+    </span>
   );
 }

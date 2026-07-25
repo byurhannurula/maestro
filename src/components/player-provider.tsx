@@ -124,15 +124,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [volume, muted]);
 
+  const BAR_OFFSET_VAR = "--player-bar-offset";
   // Publish the mini-bar's presence as a CSS var so any floating action bar can
   // sit above it (`bottom-[var(--player-bar-offset,1.5rem)]`) without each view
   // having to consume the player context just for layout.
   useEffect(() => {
     const root = document.documentElement;
-    if (current) root.style.setProperty("--player-bar-offset", "5.25rem");
-    else root.style.removeProperty("--player-bar-offset");
+    if (current) root.style.setProperty(BAR_OFFSET_VAR, "5.25rem");
+    else root.style.removeProperty(BAR_OFFSET_VAR);
     return () => {
-      root.style.removeProperty("--player-bar-offset");
+      root.style.removeProperty(BAR_OFFSET_VAR);
     };
   }, [current]);
 

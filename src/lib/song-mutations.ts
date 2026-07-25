@@ -88,25 +88,27 @@ export function bulkRemoveFromPlaylist(
   if (indices.length > 0) setRemoveState({ indices, count: indices.length });
 }
 
-export async function confirmDelete(
-  ids: string[],
-  setDeleting: (v: boolean) => void,
-  setSongs: React.Dispatch<React.SetStateAction<Song[]>>,
-  clearSelected: () => void,
-  closeDeleteDialog: () => void,
-  routerRefresh: () => void,
-) {
-  if (ids.length === 0) return;
-  setDeleting(true);
+export interface DeleteContext {
+  ids: string[];
+  setDeleting: (v: boolean) => void;
+  setSongs: React.Dispatch<React.SetStateAction<Song[]>>;
+  clearSelected: () => void;
+  closeDeleteDialog: () => void;
+  routerRefresh: () => void;
+}
+
+export async function confirmDelete(ctx: DeleteContext) {
+  if (ctx.ids.length === 0) return;
+  ctx.setDeleting(true);
   try {
-    const result = await deleteToTrash(ids);
+    const result = await deleteToTrash(ctx.ids);
     if (result) {
-      setSongs((prev) => prev.filter((s) => !result.okIds.has(s.id)));
-      clearSelected();
-      closeDeleteDialog();
-      routerRefresh();
+      ctx.setSongs((prev) => prev.filter((s) => !result.okIds.has(s.id)));
+      ctx.clearSelected();
+      ctx.closeDeleteDialog();
+      ctx.routerRefresh();
     }
   } finally {
-    setDeleting(false);
+    ctx.setDeleting(false);
   }
 }

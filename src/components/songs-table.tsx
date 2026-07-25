@@ -253,14 +253,14 @@ export function SongsTable({
   }
 
   function handleDelete() {
-    return void deleteSongs(
-      [...selected],
+    return void deleteSongs({
+      ids: [...selected],
       setDeleting,
       setSongs,
-      () => setSelected(new Set()),
-      () => setDeleteOpen(false),
-      () => router.refresh(),
-    );
+      clearSelected: () => setSelected(new Set()),
+      closeDeleteDialog: () => setDeleteOpen(false),
+      routerRefresh: () => router.refresh(),
+    });
   }
 
   async function confirmRemove() {

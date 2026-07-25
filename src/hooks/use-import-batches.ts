@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAdaptivePoll } from "@/hooks/use-adaptive-poll";
 import { apiJson, apiPost } from "@/hooks/use-api";
 import { useToggleSet } from "@/hooks/use-toggle-set";
-import { isFailed, summarize, type Counts, type Filter } from "@/lib/import/summarize";
+import { isFailed, summarize, type Filter } from "@/lib/import/summarize";
 import type { ImportBatch } from "@/lib/import/store";
 
 const IMPORT_URL = "/api/import";

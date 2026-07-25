@@ -379,6 +379,50 @@ function TrackList({
   );
 }
 
+function TrackTag({
+  track: t,
+  queued,
+  onQueue,
+}: {
+  track: DiscoveryTrack;
+  queued: boolean;
+  onQueue: () => void;
+}) {
+  if (t.inLibrary) {
+    return (
+      <span className="inline-flex w-28 shrink-0 items-center justify-end gap-1 text-[11px] font-medium text-muted-foreground">
+        <Library className="size-3" /> In library
+      </span>
+    );
+  }
+  if (!t.available) {
+    return (
+      <span className="inline-flex w-28 shrink-0 items-center justify-end text-[11px] text-muted-foreground/60">
+        Not on Deezer
+      </span>
+    );
+  }
+  return (
+    <Button
+      size="xs"
+      variant={queued ? "secondary" : "outline"}
+      className="w-28 shrink-0"
+      onClick={onQueue}
+      aria-pressed={queued}
+    >
+      {queued ? (
+        <>
+          <Check className="size-3" /> Selected
+        </>
+      ) : (
+        <>
+          <Plus className="size-3" /> Download
+        </>
+      )}
+    </Button>
+  );
+}
+
 function TrackRow({
   track: t,
   index,
@@ -455,33 +499,7 @@ function TrackRow({
         </span>
       )}
 
-      {t.inLibrary ? (
-        <span className="inline-flex w-28 shrink-0 items-center justify-end gap-1 text-[11px] font-medium text-muted-foreground">
-          <Library className="size-3" /> In library
-        </span>
-      ) : !t.available ? (
-        <span className="inline-flex w-28 shrink-0 items-center justify-end text-[11px] text-muted-foreground/60">
-          Not on Deezer
-        </span>
-      ) : (
-        <Button
-          size="xs"
-          variant={queued ? "secondary" : "outline"}
-          className="w-28 shrink-0"
-          onClick={onQueue}
-          aria-pressed={queued}
-        >
-          {queued ? (
-            <>
-              <Check className="size-3" /> Selected
-            </>
-          ) : (
-            <>
-              <Plus className="size-3" /> Download
-            </>
-          )}
-        </Button>
-      )}
+      <TrackTag track={t} queued={queued} onQueue={onQueue} />
     </div>
   );
 }
