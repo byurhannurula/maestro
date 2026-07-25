@@ -137,16 +137,26 @@ export async function getSongPaths(
 ): Promise<Array<{ id: string; path: string | null }>> {
   const token = await login();
   return mapLimit(ids, 8, async (id) => {
-    try {
-      const res = await fetch(`${env.NAVIDROME_URL}/api/song/${encodeURIComponent(id)}`, {
-        headers: { "x-nd-authorization": `Bearer ${token}` },
-        cache: "no-store",
-      });
-      if (!res.ok) return { id, path: null };
-      const s = (await res.json()) as RawSong;
-      return { id, path: s.path ?? null };
-    } catch {
-      return { id, path: null };
+    const tryFetch = async (): Promise<{ id: string; path: string | null; status?: number }> => {
+      try {
+        const res = await fetch(`${env.NAVIDROME_URL}/api/song/${encodeURIComponent(id)}`, {
+          headers: { "x-nd-authorization": `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!res.ok) return { id, path: null, status: res.status };
+        const s = (await res.json()) as RawSong;
+        return { id, path: s.path ?? null };
+      } catch {
+        return { id, path: null };
+      }
+    };
+    const first = await tryFetch();
+    if (first.path !== null) return first;
+    // Retry once on transient server error (5xx).
+    if (first.status !== undefined && first.status >= 500) {
+      const retry = await tryFetch();
+      return { id: retry.id, path: retry.path };
     }
+    return { id: first.id, path: null };
   });
 }
