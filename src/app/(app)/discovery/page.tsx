@@ -1,5 +1,5 @@
-import { DiscoveryView } from "@/components/discovery-view";
 import { PageHeader } from "@/components/page-header";
+import { DiscoveryView } from "@/components/views/discovery-view";
 import { getDiscoveryPlaylists } from "@/lib/discovery";
 import { isDiscoveryConfigured, isLastfmConfigured } from "@/lib/env";
 

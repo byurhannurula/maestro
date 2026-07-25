@@ -261,15 +261,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toggleShuffle = useCallback(() => {
     setShuffle((on) => {
       const nextOn = !on;
-      setPb((p) => {
-        if (!p) return p;
-        const cur = p.order[p.pos];
-        const order = nextOn ? shuffledOrder(p.queue.length, cur) : p.queue.map((_, i) => i);
-        return { ...p, order, pos: nextOn ? 0 : cur };
-      });
+      setPb((p) => buildShuffledOrder(p, nextOn));
       return nextOn;
     });
   }, []);
+
+  function buildShuffledOrder(p: Playback | null, shuffleOn: boolean): Playback | null {
+    if (!p) return p;
+    const cur = p.order[p.pos];
+    const order = shuffleOn ? shuffledOrder(p.queue.length, cur) : p.queue.map((_, i) => i);
+    return { ...p, order, pos: shuffleOn ? 0 : cur };
+  }
 
   const cycleRepeat = useCallback(
     () => setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off")),

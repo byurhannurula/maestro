@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { cleanKind, dateOf, mbidFrom, parseAndDedupePlaylists } from "@/lib/listenbrainz/parse";
 
+const DAILY_JAMS = "Daily Jams";
+const ISO_DATE = "2026-07-20T00:00:00Z";
+
 describe("mbidFrom", () => {
   it("extracts an MBID from a MusicBrainz URL", () => {
     expect(mbidFrom("https://musicbrainz.org/playlist/6b3a8e40-9e3d-4e8c-9f0a-2c8e9f0a2c8e")).toBe(
@@ -40,13 +43,13 @@ describe("cleanKind", () => {
   });
 
   it("keeps the title when there is no 'for' suffix", () => {
-    expect(cleanKind("Daily Jams")).toBe("Daily Jams");
+    expect(cleanKind(DAILY_JAMS)).toBe(DAILY_JAMS);
   });
 });
 
 describe("dateOf", () => {
   it("parses an ISO date string", () => {
-    expect(dateOf("2026-07-20T00:00:00Z", "")).toBe(new Date("2026-07-20T00:00:00Z").getTime());
+    expect(dateOf(ISO_DATE, "")).toBe(new Date(ISO_DATE).getTime());
   });
 
   it("falls back to 'week of' in title when date is missing", () => {
@@ -67,7 +70,7 @@ describe("parseAndDedupePlaylists", () => {
         playlist: {
           identifier: "https://musicbrainz.org/playlist/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
           title: "Weekly Exploration for user, week of 2026-07-20",
-          date: "2026-07-20T00:00:00Z",
+          date: ISO_DATE,
         },
       },
       {
@@ -81,7 +84,7 @@ describe("parseAndDedupePlaylists", () => {
         playlist: {
           identifier: "https://musicbrainz.org/playlist/cccccccc-cccc-cccc-cccc-cccccccccccc",
           title: "Daily Jams for user, week of 2026-07-20",
-          date: "2026-07-20T00:00:00Z",
+          date: ISO_DATE,
         },
       },
       {
