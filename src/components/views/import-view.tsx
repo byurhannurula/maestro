@@ -1,23 +1,19 @@
 "use client";
 
 import {
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Download,
-  Link2,
   Loader2,
-  Pause,
-  Play,
   RotateCcw,
-  Search,
   Trash2,
   Upload,
-  XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { usePlayer } from "@/components/player-provider";
+import { ActiveCard, BatchBadges } from "@/components/import/active-card";
+import { JobList } from "@/components/import/job-list";
+import { ParsePreview } from "@/components/import/parse-preview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,48 +35,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useImportBatches } from "@/hooks/use-import-batches";
 import { timeAgo } from "@/lib/format";
-import { parseImportList, type ParsedLine } from "@/lib/import/parse";
-import {
-  ACTIVE,
-  batchTitle,
-  isFailed,
-  NO_PLAYLIST,
-  summarize,
-  type Counts,
-  type Filter,
-} from "@/lib/import/summarize";
-import { previewTrack } from "@/lib/player-track";
+import { parseImportList } from "@/lib/import/parse";
+import { batchTitle, isFailed, NO_PLAYLIST, summarize, type Filter } from "@/lib/import/summarize";
 import { cn } from "@/lib/utils";
-import type { ImportBatch, ImportJob } from "@/lib/import/store";
+import type { ImportJob } from "@/lib/import/store";
 import type { Playlist } from "@/lib/types";
-
-function JobStatusLabel({ job }: { job: ImportJob }) {
-  const s = job.status;
-  if (ACTIVE.includes(s))
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-blue-300">
-        <Loader2 className="size-3 animate-spin" /> {s}
-      </span>
-    );
-  if (s === "added")
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
-        <CheckCircle2 className="size-3" /> added
-      </span>
-    );
-  if (s === "needs_review")
-    return (
-      <Badge variant="outline" className="border-amber-500/40 text-amber-300">
-        needs review
-      </Badge>
-    );
-  if (s === "skipped") return <span className="text-xs text-muted-foreground">skipped</span>;
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-red-400">
-      <XCircle className="size-3" /> {s.replace(/_/g, " ")}
-    </span>
-  );
-}
 
 export function ImportView({ playlists }: { playlists: Playlist[] }) {
   const {
@@ -442,212 +401,5 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: stri
       </div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
-  );
-}
-
-/** Live preview of how each pasted line will be interpreted. */
-function ParsePreview({ lines, skipped }: { lines: ParsedLine[]; skipped: number }) {
-  const CAP = 60;
-  return (
-    <div className="flex min-h-56 flex-col rounded-lg border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs">
-        <span className="font-medium text-muted-foreground">Preview</span>
-        <span className="flex items-center gap-2 tabular-nums">
-          <span className="text-foreground">{lines.length} importable</span>
-          {skipped > 0 && <span className="text-muted-foreground">{skipped} skipped</span>}
-        </span>
-      </div>
-      {lines.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-muted-foreground">
-          Parsed lines appear here as you type.
-        </div>
-      ) : (
-        <ul className="flex-1 divide-y divide-border/40 overflow-y-auto">
-          {lines.slice(0, CAP).map((p, i) => (
-            <li key={i} className="flex items-center gap-2 px-3 py-1.5 text-sm">
-              {p.kind === "url" ? (
-                <>
-                  <Link2 className="size-3.5 shrink-0 text-blue-300" />
-                  <span className="truncate text-muted-foreground">{p.url}</span>
-                </>
-              ) : p.primaryArtist ? (
-                <>
-                  <span className="truncate font-medium">{p.title}</span>
-                  <span className="shrink-0 text-muted-foreground">·</span>
-                  <span className="truncate text-muted-foreground">{p.primaryArtist}</span>
-                  {p.artists.length > 1 && (
-                    <span className="shrink-0 text-xs text-muted-foreground/60">
-                      +{p.artists.length - 1}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Search className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-muted-foreground">{p.raw}</span>
-                </>
-              )}
-            </li>
-          ))}
-          {lines.length > CAP && (
-            <li className="px-3 py-1.5 text-xs text-muted-foreground">
-              +{lines.length - CAP} more…
-            </li>
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function BatchBadges({ c }: { c: Counts }) {
-  return (
-    <div className="flex shrink-0 items-center gap-1.5 text-xs">
-      {c.added > 0 && (
-        <Badge variant="secondary" className="text-emerald-400">
-          {c.added} added
-        </Badge>
-      )}
-      {c.review > 0 && (
-        <Badge variant="outline" className="border-amber-500/40 text-amber-300">
-          {c.review} review
-        </Badge>
-      )}
-      {c.failed > 0 && (
-        <Badge variant="outline" className="border-red-500/40 text-red-400">
-          {c.failed} failed
-        </Badge>
-      )}
-      {c.active > 0 && <Badge variant="outline">{c.active} running</Badge>}
-    </div>
-  );
-}
-
-/** A running batch: prominent, with a progress bar and its job list always shown. */
-function ActiveCard({
-  batch,
-  title,
-  onResolve,
-  onRetryRow,
-}: {
-  batch: ImportBatch;
-  title: string;
-  onResolve: (batchId: string, jobId: string, action: "pick" | "skip", songId?: string) => void;
-  onRetryRow: (line: string) => void;
-}) {
-  const total = batch.jobs.length;
-  const settled = batch.jobs.filter((j) => !ACTIVE.includes(j.status)).length;
-  const pct = total ? Math.round((settled / total) * 100) : 0;
-  return (
-    <div className="overflow-hidden rounded-lg border border-primary/40 bg-primary/[0.03]">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <Loader2 className="size-4 shrink-0 animate-spin text-blue-300" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{title}</div>
-          <div className="text-xs text-muted-foreground tabular-nums">
-            {settled} / {total} processed
-          </div>
-        </div>
-        <BatchBadges c={summarize(batch.jobs)} />
-      </div>
-      <div className="h-1 w-full bg-muted">
-        <div
-          className="h-full bg-primary transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="border-t border-border">
-        <JobList batch={batch} onResolve={onResolve} onRetryRow={onRetryRow} />
-      </div>
-    </div>
-  );
-}
-
-function JobList({
-  batch,
-  only,
-  onResolve,
-  onRetryRow,
-}: {
-  batch: ImportBatch;
-  only?: (j: ImportJob) => boolean;
-  onResolve: (batchId: string, jobId: string, action: "pick" | "skip", songId?: string) => void;
-  onRetryRow: (line: string) => void;
-}) {
-  const player = usePlayer();
-  const jobs = only ? batch.jobs.filter(only) : batch.jobs;
-  return (
-    <table className="w-full text-sm">
-      <tbody>
-        {jobs.map((job) => {
-          const preview = job.deezer?.preview;
-          const playing = player.isCurrent(job.id) && player.playing;
-          return (
-            <tr key={job.id} className="border-b border-border/40 align-top last:border-0">
-              <td className="px-4 py-2">
-                <div className="flex items-center gap-2">
-                  {preview && (
-                    <button
-                      onClick={() =>
-                        player.toggle(
-                          previewTrack(
-                            job.id,
-                            job.title ?? job.line,
-                            preview,
-                            job.artist,
-                            job.deezer?.cover,
-                          ),
-                        )
-                      }
-                      aria-label={playing ? "Pause preview" : "Play preview"}
-                      className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-                    </button>
-                  )}
-                  <span className="font-medium">{job.title ?? job.line}</span>
-                </div>
-                <div className="text-xs text-muted-foreground">{job.artist}</div>
-                {job.error && <div className="text-xs text-red-400/80">{job.error}</div>}
-                {job.status === "needs_review" && job.candidates && job.candidates.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {job.candidates.map((cand) => (
-                      <button
-                        key={cand.id}
-                        onClick={() => onResolve(batch.id, job.id, "pick", cand.id)}
-                        className="rounded-md border border-border px-2 py-1 text-xs hover:border-primary hover:bg-primary/10"
-                      >
-                        {cand.title} — <span className="text-muted-foreground">{cand.artist}</span>
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => onResolve(batch.id, job.id, "skip")}
-                      className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      skip
-                    </button>
-                  </div>
-                )}
-              </td>
-              <td className="whitespace-nowrap px-4 py-2 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <JobStatusLabel job={job} />
-                  {isFailed(job) && (
-                    <button
-                      onClick={() => onRetryRow(job.line)}
-                      title="Retry this track"
-                      aria-label="Retry this track"
-                      className="text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      <RotateCcw className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
   );
 }
