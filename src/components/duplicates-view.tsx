@@ -17,8 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
+import { pruneGroups } from "@/lib/navidrome/dedupe";
 import { cn } from "@/lib/utils";
-import type { DuplicateGroup, DuplicatesResult, Song } from "@/lib/types";
+import type { DuplicatesResult, Song } from "@/lib/types";
 
 type Match = "conservative" | "aggressive";
 
@@ -27,24 +28,6 @@ function quality(s: Song): string {
   if (s.bitRate) parts.push(`${s.bitRate} kbps`);
   if (s.sizeBytes) parts.push(formatBytes(s.sizeBytes));
   return parts.join(" · ") || "—";
-}
-
-/** Drop trashed tracks from the groups, recomputing keeper/reclaimable, and
- *  discard any cluster that no longer has ≥2 copies. */
-function pruneGroups(groups: DuplicateGroup[], removedIds: Set<string>): DuplicateGroup[] {
-  const out: DuplicateGroup[] = [];
-  for (const g of groups) {
-    const members = g.members.filter((m) => !removedIds.has(m.id));
-    if (members.length < 2) continue; // no longer a duplicate
-    const durs = members.map((m) => m.durationSecs);
-    out.push({
-      ...g,
-      members,
-      versionsDiffer: Math.max(...durs) - Math.min(...durs) > 3,
-      reclaimableBytes: members.slice(1).reduce((n, m) => n + (m.sizeBytes ?? 0), 0),
-    });
-  }
-  return out;
 }
 
 export function DuplicatesView({ now }: { now: number }) {

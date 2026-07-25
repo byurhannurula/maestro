@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { buildDuplicateGroups, keeperCompare, normArtist, normTitle } from "@/lib/navidrome/dedupe";
-import type { Song } from "@/lib/types";
+import {
+  buildDuplicateGroups,
+  keeperCompare,
+  normArtist,
+  normTitle,
+  pruneGroups,
+} from "@/lib/navidrome/dedupe";
+import type { DuplicateGroup, Song } from "@/lib/types";
 
 function song(p: Partial<Song> & { id: string }): Song {
   return {
@@ -72,5 +78,41 @@ describe("buildDuplicateGroups", () => {
     const res = buildDuplicateGroups(songs, false, "navidrome");
     expect(res.groups[0].members[0].id).toBe("keep");
     expect(res.groups[0].reclaimableBytes).toBe(700);
+  });
+});
+
+describe("pruneGroups", () => {
+  function group(overrides: Partial<DuplicateGroup> = {}): DuplicateGroup {
+    return {
+      key: "artist␟title",
+      artist: "Artist",
+      title: "Title",
+      members: [
+        song({ id: "1", album: "A", bitRate: 320, sizeBytes: 10_000_000 }),
+        song({ id: "2", album: "B", bitRate: 256, sizeBytes: 8_000_000 }),
+        song({ id: "3", album: "C", bitRate: 192, sizeBytes: 6_000_000 }),
+      ],
+      versionsDiffer: false,
+      reclaimableBytes: 14_000_000,
+      ...overrides,
+    };
+  }
+
+  it("removes specified ids and recomputes reclaimableBytes", () => {
+    const g = group();
+    const result = pruneGroups([g], new Set(["2"]));
+    expect(result).toHaveLength(1);
+    expect(result[0].members.map((m) => m.id)).toEqual(["1", "3"]);
+    expect(result[0].reclaimableBytes).toBe(6_000_000);
+  });
+
+  it("drops a group when fewer than 2 copies remain", () => {
+    const g = group();
+    const result = pruneGroups([g], new Set(["1", "2"]));
+    expect(result).toHaveLength(0);
+  });
+
+  it("handles empty input", () => {
+    expect(pruneGroups([], new Set())).toEqual([]);
   });
 });

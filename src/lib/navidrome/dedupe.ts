@@ -65,6 +65,23 @@ export function keeperCompare(a: Song, b: Song): number {
   );
 }
 
+/** Drop trashed tracks from the groups, recomputing keeper/reclaimable. */
+export function pruneGroups(groups: DuplicateGroup[], removedIds: Set<string>): DuplicateGroup[] {
+  const out: DuplicateGroup[] = [];
+  for (const g of groups) {
+    const members = g.members.filter((m) => !removedIds.has(m.id));
+    if (members.length < 2) continue;
+    const durs = members.map((m) => m.durationSecs);
+    out.push({
+      ...g,
+      members,
+      versionsDiffer: Math.max(...durs) - Math.min(...durs) > 3,
+      reclaimableBytes: members.slice(1).reduce((n, m) => n + (m.sizeBytes ?? 0), 0),
+    });
+  }
+  return out;
+}
+
 export function buildDuplicateGroups(
   all: Song[],
   aggressive: boolean,

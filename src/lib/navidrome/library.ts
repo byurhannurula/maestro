@@ -4,17 +4,11 @@ import { status as deemixStatus } from "@/lib/deemix";
 import { env, isNavidromeConfigured } from "@/lib/env";
 import { buildDuplicateGroups, normArtist, trackKey } from "@/lib/navidrome/dedupe";
 import { getSongs } from "@/lib/navidrome/native";
+import { applyStaleCutoff, compareBy, processInMemory } from "@/lib/navidrome/query";
 import { ping, getPlaylists, search3Songs, getPlaylistSongs } from "@/lib/navidrome/subsonic";
 import { sampleSongs, samplePlaylists } from "@/lib/sample-data";
 import { cached } from "@/lib/storage/cache";
-import type {
-  DuplicatesResult,
-  Playlist,
-  Song,
-  SongQuery,
-  SongSortKey,
-  SongsResult,
-} from "@/lib/types";
+import type { DuplicatesResult, Playlist, Song, SongQuery, SongsResult } from "@/lib/types";
 
 /**
  * Data-access layer used by pages and the /api/songs route. Returns live
@@ -114,14 +108,6 @@ async function fetchNeverPlayed(search?: string, favoritesOnly?: boolean): Promi
   return zeros;
 }
 
-/** Drop never-played tracks that were added more recently than `days` ago. */
-function applyStaleCutoff(songs: Song[], days?: number): Song[] {
-  if (!days || days <= 0) return songs;
-  const cutoff = Date.now() - days * 86_400_000;
-  // Unknown createdAt → treat as old (keep); Navidrome always sets it in practice.
-  return songs.filter((s) => !s.createdAt || Date.parse(s.createdAt) <= cutoff);
-}
-
 // ---------------------------------------------------------------------------
 // Duplicate detection (read-only). Groups tracks whose normalised artist+title
 // collide — catching re-downloads and near-identical tags. Remix/version
@@ -209,50 +195,6 @@ export async function getDuplicateGroups(aggressive: boolean): Promise<Duplicate
       error: err instanceof Error ? err.message : String(err),
     };
   }
-}
-
-/** Apply search + favourites filter + sort + pagination to an in-memory list. */
-function processInMemory(
-  all: Song[],
-  q: SongQuery,
-  search?: string,
-): { songs: Song[]; total: number } {
-  let rows = all;
-  if (search) {
-    const needle = search.toLowerCase();
-    rows = rows.filter(
-      (s) =>
-        s.title.toLowerCase().includes(needle) ||
-        s.artist.toLowerCase().includes(needle) ||
-        s.album.toLowerCase().includes(needle),
-    );
-  }
-  if (q.favoritesOnly) rows = rows.filter((s) => s.starred);
-  rows = [...rows].sort(compareBy(q.sort, q.order));
-  return { songs: rows.slice(q.start, q.end), total: rows.length };
-}
-
-function compareBy(sort: SongSortKey, order: "ASC" | "DESC") {
-  const dir = order === "ASC" ? 1 : -1;
-  const val = (s: Song): string | number => {
-    switch (sort) {
-      case "playCount":
-        return s.playCount;
-      case "createdAt":
-        return s.createdAt ? Date.parse(s.createdAt) : 0;
-      case "lastPlayed":
-        return s.lastPlayed ? Date.parse(s.lastPlayed) : 0;
-      default:
-        return s[sort].toLowerCase();
-    }
-  };
-  return (a: Song, b: Song) => {
-    const av = val(a);
-    const bv = val(b);
-    if (av < bv) return -1 * dir;
-    if (av > bv) return 1 * dir;
-    return 0;
-  };
 }
 
 // Wrapped in React cache(): the layout and the page both call this in one
