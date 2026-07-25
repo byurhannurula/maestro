@@ -53,26 +53,29 @@ Playback stays where it's good — Feishin, the Navidrome web UI, or any Subsoni
 - **Keyboard shortcuts** — `g`-then-key navigation, `⌘/Ctrl+,` for Settings, `r` to reload the
   library, `?` for help.
 - **Installable (PWA)** — add to a phone home screen; runs standalone.
-- **Discovery** _(mockup)_ — recommendations UI on sample data; the intended feed is
-  Last.fm / MusicBrainz (see roadmap).
+- **Discovery** _(real feeds)_ — ListenBrainz recommendation playlists + Last.fm
+  recommended-tracks / similar-artists, each track enriched with a 30s Deezer preview
+  - cover + "in library?" match flag; one-click download of the new ones through the
+    import pipeline. Needs `LISTENBRAINZ_USER` (public); Last.fm sections need
+    `LASTFM_API_KEY` (read-only, no secret).
+- **Preview player** — 30-second Deezer previews in Discovery and the import review
+  flow; full playback stays in Feishin / the Navidrome web UI / any Subsonic client.
+- **Webhook ingest** — `POST /api/webhook/import` with a shared secret (Shazam → iOS
+  Shortcut → auto-download into a playlist). Machine-to-machine; excluded from the cookie
+  gate in `proxy.ts` and authed by `WEBHOOK_SECRET`.
 
 ## How it works
 
-```
-  paste / drop            ┌──────────────────┐   Subsonic API (/rest/*)   ── stable
-  Artist - Title  ──────▶ │      Maestro      │ ─▶ Navidrome
-                          │   Next.js 16 · TS │   Native API (/api/*)      ── sort + real paths
-   phone / browser  ────▶ │   (this app)      │ ─▶ Navidrome
-                          │                   │   REST search + queue      ── download backend (deemix)
-                          └────────┬──────────┘ ─▶
-                                   │
-             SQLite (auth)  +  import history JSON   ·   ./music (rw)  +  ./trash (rw)
-```
+<p align="center">
+  <img src="./docs/architecture.svg" alt="Maestro architecture and data flow" width="860" />
+</p>
 
 - **Subsonic API** (`/rest/*`) — the stable workhorse: search, star, playlist CRUD, scans.
 - **Native API** (`/api/*`) — used only for the sortable flat list and to resolve **real file paths**
   (the Subsonic path is tag-derived and doesn't match disk). Isolated in `src/lib/navidrome/`.
 - **Download backend** — a deemix-compatible REST API for name-based downloads.
+- **Discovery feeds** — public ListenBrainz / Last.fm / Deezer APIs (no secrets; Last.fm uses a
+  read-only API key). No Maestro-side rate limiting.
 - **No database server, no job queue** — an in-process worker runs imports; history is mirrored to a
   JSON file; a small SQLite file backs auth. Reads are cached in-memory (24h) and busted on any change.
 
@@ -138,25 +141,28 @@ docker compose pull maestro && docker compose up -d maestro
 
 Everything is env-driven (see [`.env.example`](./.env.example)); nothing is hard-coded.
 
-| Variable                                        | Purpose                                                                   | Default                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------- | ----------------------- |
-| `NAVIDROME_URL`                                 | Navidrome base URL (service name inside Docker)                           | `http://navidrome:4533` |
-| `NAVIDROME_USERNAME` / `NAVIDROME_PASSWORD`     | Navidrome credentials                                                     | —                       |
-| `DEEMIX_URL`                                    | Download backend base URL                                                 | `http://deemix:6595`    |
-| `DEEMIX_ARL`                                    | Download backend auth token (imports)                                     | —                       |
-| `MUSIC_DIR` / `TRASH_DIR`                       | Container paths for the music + trash volumes                             | `/music` / `/trash`     |
-| `DATABASE_PATH`                                 | App data (auth SQLite + import history)                                   | `/data/maestro.db`      |
-| **`BETTER_AUTH_SECRET`**                        | Session-signing secret — **required** (`openssl rand -hex 32`)            | —                       |
-| `BETTER_AUTH_URL`                               | Public origin (OAuth callbacks + cookies)                                 | `http://localhost:4544` |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | Seed break-glass admin on first boot (blank = skip)                       | — / — / `Admin`         |
-| `POCKETID_ISSUER_URL`                           | PocketID base URL (OIDC discovery derived from it)                        | —                       |
-| `POCKETID_CLIENT_ID` / `POCKETID_CLIENT_SECRET` | PocketID OAuth client                                                     | —                       |
-| `CACHE_TTL_SECONDS`                             | How long Navidrome reads are cached (busted on any change)                | `86400`                 |
-| `DEFAULT_PAGE_SIZE`                             | Initial fetch / default rows per page                                     | `25`                    |
-| `CLEANUP_MIN_AGE_DAYS`                          | Cleanup hides never-played tracks newer than this (UI-tunable, `0` = off) | `30`                    |
-| `IMPORT_DELAY_MS` / `IMPORT_TIMEOUT_MS`         | Import pipeline pacing                                                    | `1500` / `300000`       |
-| `WEBHOOK_SECRET` / `WEBHOOK_PLAYLIST`           | Reserved for the future webhook ingest                                    | — / `Shazam`            |
-| `PORT`                                          | Server port                                                               | `4544`                  |
+| Variable                                        | Purpose                                                                                                                 | Default                                  |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `NAVIDROME_URL`                                 | Navidrome base URL (service name inside Docker)                                                                         | `http://navidrome:4533`                  |
+| `NAVIDROME_USERNAME` / `NAVIDROME_PASSWORD`     | Navidrome credentials                                                                                                   | —                                        |
+| `DEEMIX_URL`                                    | Download backend base URL                                                                                               | `http://deemix:6595`                     |
+| `DEEMIX_ARL`                                    | Download backend auth token (imports)                                                                                   | —                                        |
+| `MUSIC_DIR` / `TRASH_DIR`                       | Container paths for the music + trash volumes                                                                           | `/music` / `/trash`                      |
+| `DATABASE_PATH`                                 | App data (auth SQLite + import history)                                                                                 | `/data/maestro.db`                       |
+| **`BETTER_AUTH_SECRET`**                        | Session-signing secret — **required** (`openssl rand -hex 32`)                                                          | —                                        |
+| `BETTER_AUTH_URL`                               | Public origin (OAuth callbacks + cookies)                                                                               | `http://localhost:4544`                  |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | Seed break-glass admin on first boot (blank = skip)                                                                     | — / — / `Admin`                          |
+| `POCKETID_ISSUER_URL`                           | PocketID base URL (OIDC discovery derived from it)                                                                      | —                                        |
+| `POCKETID_CLIENT_ID` / `POCKETID_CLIENT_SECRET` | PocketID OAuth client                                                                                                   | —                                        |
+| `CACHE_TTL_SECONDS`                             | How long Navidrome reads are cached (busted on any change)                                                              | `86400`                                  |
+| `DEFAULT_PAGE_SIZE`                             | Initial fetch / default rows per page                                                                                   | `25`                                     |
+| `CLEANUP_MIN_AGE_DAYS`                          | Cleanup hides never-played tracks newer than this (UI-tunable, `0` = off)                                               | `30`                                     |
+| `IMPORT_DELAY_MS` / `IMPORT_TIMEOUT_MS`         | Import pipeline pacing                                                                                                  | `1500` / `300000`                        |
+| `WEBHOOK_SECRET` / `WEBHOOK_PLAYLIST`           | Headless import ingest (Shazam → iOS Shortcut); empty secret disables it                                                | — / `Shazam`                             |
+| `LISTENBRAINZ_URL` / `LISTENBRAINZ_USER`        | ListenBrainz base URL + your username (public, no API key) — Discovery                                                  | `https://api.listenbrainz.org` / —       |
+| `DEEZER_API_URL`                                | Deezer public API base (30s previews + covers + downloadability check)                                                  | `https://api.deezer.com`                 |
+| `LASTFM_API_URL` / `LASTFM_API_KEY`             | Last.fm base URL + your scrobble API key (read-only; no secret needed) — Discovery similar-artists / recommended tracks | `https://ws.audioscrobbler.com/2.0/` / — |
+| `PORT`                                          | Server port                                                                                                             | `4544`                                   |
 
 ### Authentication
 
@@ -183,9 +189,13 @@ break-glass fallback for when PocketID is unavailable. Public sign-up is disable
 
 - [ ] Music Folder Browser — browse the real `./music` tree, delete straight from disk
 - [ ] Duplicate detection — stronger layers (ISRC / MusicBrainz ID, byte-identical file hash)
-- [ ] Webhook ingest — Shazam → iOS Shortcut → auto-download into a playlist
-- [ ] Recommendations — wire Discovery to real Last.fm / MusicBrainz / ListenBrainz feeds
-- [ ] Import polish — per-row retry, Deezer-URL lines, resume in-flight batches after restart
+- [ ] **Spotify import** — first-timer migration path off Spotify to self-hosted. Two
+      input modes (landed in this order): (1) paste/drop an exported Spotify playlist JSON
+      (no Spotify credentials, reuses the existing import pipeline); (2) paste a Spotify
+      playlist URL and resolve tracks via the Spotify Web API (adds OAuth PKCE client flow,
+      `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`, and a token row in the auth DB). Both
+      feed the existing `Artist - Title` → deemix → scan → match → playlist pipeline.
+- [ ] Import polish — per-row retry, resume in-flight batches after restart
 - [ ] Playlist drag-reorder
 - [ ] Delete safety — scheduled auto-purge, in-app "Recently deleted / Restore"
 - [ ] Auth — in-app allowlist / roles
@@ -225,6 +235,9 @@ pnpm release:patch   # bumps version, tags, pushes -> publishes :<version>, :<ma
   `src/lib/navidrome/`; **pin the Navidrome image** in production.
 - Deleting a file doesn't remove it from Navidrome playlists until its scan purges the missing track
   (run `navidrome scan --full` to reconcile immediately).
+- **Discovery** pulls from public ListenBrainz / Deezer / Last.fm APIs — no Maestro-side rate
+  limiting; if a section is empty, check `LISTENBRAINZ_USER` and `LASTFM_API_KEY` in Settings →
+  System → Health.
 
 ## License
 

@@ -1,6 +1,12 @@
 # Maestro — standalone. Point it at your own Navidrome instance and download
 # backend via .env. If you run those as containers too, drop this service into
 # the same compose project / network so the service-name URLs resolve.
+#
+# Copy .env.example to .env and fill in your values. Every variable in .env is
+# passed straight into the container; anything unset falls back to the app's
+# own defaults (see src/lib/env.ts). The file is optional — if absent, only
+# the container-path overrides below are applied and everything else uses
+# env.ts defaults (so a bare `docker compose up` still boots).
 services:
   maestro:
     # Build locally, or pull the published image once released.
@@ -11,35 +17,21 @@ services:
       dockerfile: Dockerfile
     container_name: maestro
     # Run as the host user so the app can write to the shared volumes.
-    user: "${PUID}:${PGID}"
-    ports:
-      - 4544:4544
+    # Reads PUID/PGID from .env (or the shell); falls back to 1000.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    env_file:
+      - path: .env
+        required: false
     environment:
-      # Your Navidrome instance (service name if on the same network, else host:port).
-      - NAVIDROME_URL=${NAVIDROME_URL:-http://navidrome:4533}
-      - NAVIDROME_USERNAME=${NAVIDROME_USERNAME}
-      - NAVIDROME_PASSWORD=${NAVIDROME_PASSWORD}
-      # Your download backend.
-      - DEEMIX_URL=${DEEMIX_URL:-http://deemix:6595}
-      - DEEMIX_ARL=${DEEMIX_ARL:-}
+      # Container-internal paths — override anything host-relative in .env so
+      # the app writes inside the mounted volumes below.
       - MUSIC_DIR=/music
       - TRASH_DIR=/trash
       - DATABASE_PATH=/data/maestro.db
-      - IMPORT_DELAY_MS=1500
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
-      - WEBHOOK_PLAYLIST=Shazam
-      # Auth (better-auth)
-      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:4544}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      - ADMIN_NAME=${ADMIN_NAME:-Admin}
-      # OIDC via PocketID
-      - POCKETID_ISSUER_URL=${POCKETID_ISSUER_URL:-}
-      - POCKETID_CLIENT_ID=${POCKETID_CLIENT_ID:-}
-      - POCKETID_CLIENT_SECRET=${POCKETID_CLIENT_SECRET:-}
+      # Fixed inside the container; the ports map below is the public face.
       - PORT=4544
-      - TZ=${TZ}
+    ports:
+      - 4544:4544
     volumes:
       # Read-write: the app deletes by moving files out of the library.
       - ./music:/music
