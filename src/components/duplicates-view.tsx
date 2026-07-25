@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { apiJson, apiPost } from "@/hooks/use-api";
 import { formatBytes, formatDuration, relativeTime } from "@/lib/format";
 import { pruneGroups } from "@/lib/navidrome/dedupe";
 import { cn } from "@/lib/utils";
@@ -42,9 +43,7 @@ export function DuplicatesView({ now }: { now: number }) {
   const load = useCallback(async (m: Match) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/duplicates?match=${m}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const d: DuplicatesResult = await res.json();
+      const d = await apiJson<DuplicatesResult>(`/api/duplicates?match=${m}`);
       setData(d);
       setSelected(new Set());
     } catch (e) {
@@ -97,13 +96,7 @@ export function DuplicatesView({ now }: { now: number }) {
     if (ids.length === 0) return;
     setDeleting(true);
     try {
-      const res = await fetch("/api/delete", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`);
+      const body = await apiPost<{ moved: number; failed: number; results: Array<{ id?: string; ok?: boolean }> }>("/api/delete", { ids });
       const failedNote = body.failed ? `, ${body.failed} failed` : "";
       toast.success(`Moved ${body.moved} to trash${failedNote}`);
       setConfirmOpen(false);

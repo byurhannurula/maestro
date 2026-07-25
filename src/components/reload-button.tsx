@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { apiPost } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,7 +20,7 @@ export function ReloadButton() {
     if (busy) return;
     setBusy(true);
     try {
-      await fetch("/api/reload", { method: "POST" });
+      await apiPost("/api/reload");
     } catch {
       /* refresh anyway */
     }

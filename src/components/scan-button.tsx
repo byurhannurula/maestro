@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { apiPost } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
 /** Trigger a Navidrome scan (picks up new files, purges changed folders). */
@@ -15,9 +16,7 @@ export function ScanButton() {
   async function scan() {
     setBusy(true);
     try {
-      const res = await fetch("/api/scan", { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      const data = await apiPost<{ scanning?: boolean }>("/api/scan");
       toast.success(data.scanning ? "Scan in progress…" : "Scan triggered");
       router.refresh();
     } catch (e) {

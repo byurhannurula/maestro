@@ -27,6 +27,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useSidebar } from "@/components/sidebar-provider";
+import { apiPost } from "@/hooks/use-api";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -176,12 +177,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const nextVal = !starred;
     setStarred(nextVal);
     try {
-      const res = await fetch("/api/star", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ids: [current.id], starred: nextVal }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await apiPost("/api/star", { ids: [current.id], starred: nextVal });
     } catch (e) {
       setStarred(!nextVal);
       toast.error(`Favourite failed: ${e instanceof Error ? e.message : e}`);

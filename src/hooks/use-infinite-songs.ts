@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { apiJson } from "@/hooks/use-api";
 import type { DataSource, Song, SongSortKey, SongsResult } from "@/lib/types";
 
 export interface SongQueryParams {
@@ -60,9 +61,7 @@ export function useInfiniteSongs(initial: SongsResult, params: SongQueryParams) 
 
       setLoading(true);
       try {
-        const res = await fetch(`/api/songs?${qp.toString()}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: SongsResult = await res.json();
+        const data = await apiJson<SongsResult>(`/api/songs?${qp.toString()}`);
 
         if (reset) {
           seenIds.current = new Set(data.songs.map((s) => s.id));

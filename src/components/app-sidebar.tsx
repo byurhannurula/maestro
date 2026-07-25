@@ -33,6 +33,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { apiPost } from "@/hooks/use-api";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils";
 import type { Playlist } from "@/lib/types";
@@ -86,7 +87,7 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
     if (reloading) return;
     setReloading(true);
     try {
-      await fetch("/api/reload", { method: "POST" });
+      await apiPost("/api/reload");
     } catch {
       /* refresh anyway */
     }
@@ -99,12 +100,7 @@ export function AppSidebar({ playlists, username }: { playlists: Playlist[]; use
     const name = window.prompt("New playlist name")?.trim();
     if (!name) return;
     try {
-      const res = await fetch("/api/playlists", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await apiPost("/api/playlists", { name });
       toast.success(`Created "${name}"`);
       router.refresh();
     } catch (e) {

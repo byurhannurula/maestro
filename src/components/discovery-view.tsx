@@ -64,8 +64,7 @@ export function DiscoveryView({
     setRecommended(null);
     setShowAllRec(false);
     try {
-      const res = await fetch("/api/discovery?recommended=1&refresh=1");
-      const data = await res.json().catch(() => ({}));
+      const data = await apiJson<{ tracks?: DiscoveryTrack[] }>("/api/discovery?recommended=1&refresh=1");
       setRecommended(data.tracks ?? []);
     } catch {
       setRecommended([]);
@@ -76,8 +75,7 @@ export function DiscoveryView({
     setArtists(null);
     setExpandedArtist(null);
     try {
-      const res = await fetch("/api/discovery?artists=1&refresh=1");
-      const data = await res.json().catch(() => ({}));
+      const data = await apiJson<{ artists?: DiscoveryArtist[] }>("/api/discovery?artists=1&refresh=1");
       setArtists(data.artists ?? []);
     } catch {
       setArtists([]);
@@ -91,8 +89,7 @@ export function DiscoveryView({
     let alive = true;
     (async () => {
       try {
-        const res = await fetch("/api/discovery?recommended=1");
-        const data = await res.json().catch(() => ({}));
+        const data = await apiJson<{ tracks?: DiscoveryTrack[] }>("/api/discovery?recommended=1");
         if (alive) setRecommended(data.tracks ?? []);
       } catch {
         if (alive) setRecommended([]);
@@ -100,8 +97,7 @@ export function DiscoveryView({
     })();
     (async () => {
       try {
-        const res = await fetch("/api/discovery?artists=1");
-        const data = await res.json().catch(() => ({}));
+        const data = await apiJson<{ artists?: DiscoveryArtist[] }>("/api/discovery?artists=1");
         if (alive) setArtists(data.artists ?? []);
       } catch {
         if (alive) setArtists([]);

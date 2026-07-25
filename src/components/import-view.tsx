@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { apiJson, apiPost } from "@/hooks/use-api";
 import { parseImportList, type ParsedLine } from "@/lib/import/parse";
 import { cn } from "@/lib/utils";
 import type { ImportBatch, ImportJob, JobStatus } from "@/lib/import/store";
@@ -156,9 +157,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
 
   async function refresh(): Promise<boolean> {
     try {
-      const res = await fetch(IMPORT_URL);
-      if (!res.ok) return false;
-      const data: { batches: ImportBatch[] } = await res.json();
+      const data = await apiJson<{ batches: ImportBatch[] }>(IMPORT_URL);
       setBatches(data.batches);
       return data.batches.some((b) => !b.done);
     } catch {
@@ -190,17 +189,11 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
     toast.success(`Loaded ${file.name}`);
   }
 
-  async function submit(body: { text: string; playlistId?: string; playlistName?: string }) {
-    const res = await fetch(IMPORT_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+  async function submit(body: { text: string; playlistId?: string; playlistName?: string }): Promise<string> {
+    const data = await apiPost<{ batchId: string }>(IMPORT_URL, body);
     setExpanded((s) => new Set(s).add(data.batchId));
     await refresh();
-    return data.batchId as string;
+    return data.batchId;
   }
 
   async function start() {
@@ -233,13 +226,7 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
 
   async function resolve(batchId: string, jobId: string, action: "pick" | "skip", songId?: string) {
     try {
-      const res = await fetch(`/api/import/${batchId}/resolve`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jobId, action, songId }),
-      });
-      if (!res.ok)
-        throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);
+      await apiPost(`/api/import/${batchId}/resolve`, { jobId, action, songId });
       await refresh();
     } catch (e) {
       toast.error(`Action failed: ${e instanceof Error ? e.message : e}`);
@@ -250,11 +237,9 @@ export function ImportView({ playlists }: { playlists: Playlist[] }) {
     if (!confirm) return;
     try {
       if (confirm.kind === "batch") {
-        const res = await fetch(`/api/import/${confirm.id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await apiJson(`/api/import/${confirm.id}`, { method: "DELETE" });
       } else {
-        const res = await fetch(IMPORT_URL, { method: "DELETE" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await apiJson(IMPORT_URL, { method: "DELETE" });
       }
       await refresh();
     } catch (e) {

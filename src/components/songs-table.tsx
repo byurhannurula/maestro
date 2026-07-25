@@ -49,6 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { apiPost } from "@/hooks/use-api";
 import { useInfiniteSongs } from "@/hooks/use-infinite-songs";
 import { usePersistent } from "@/hooks/use-persistent";
 import { useViewportWidth } from "@/hooks/use-viewport-width";
@@ -374,12 +375,7 @@ export function SongsTable({
   }
 
   async function persistStar(ids: string[], starred: boolean) {
-    const res = await fetch("/api/star", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids, starred }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await apiPost("/api/star", { ids, starred });
   }
 
   function toggleHeart(s: Song) {
@@ -410,12 +406,7 @@ export function SongsTable({
   async function addSelectedToPlaylist(id: string, name: string) {
     const songIds = [...selected];
     try {
-      const res = await fetch("/api/playlist-add", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ playlistId: id, songIds }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await apiPost("/api/playlist-add", { playlistId: id, songIds });
       toast.success(`Added ${songIds.length} to "${name}"`);
       setSelected(new Set());
       router.refresh();
@@ -428,13 +419,7 @@ export function SongsTable({
     const name = window.prompt("New playlist name")?.trim();
     if (!name) return;
     try {
-      const res = await fetch("/api/playlists", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { playlists: Playlist[] };
+      const data = await apiPost<{ playlists: Playlist[] }>("/api/playlists", { name });
       const created = data.playlists.find((p) => p.name === name);
       if (created) await addSelectedToPlaylist(created.id, name);
     } catch (e) {
@@ -445,12 +430,7 @@ export function SongsTable({
   async function removeFromPlaylist(indices: number[]) {
     if (!playlistId || indices.length === 0) return;
     try {
-      const res = await fetch("/api/playlist-remove", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ playlistId, indices }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await apiPost("/api/playlist-remove", { playlistId, indices });
       toast.success(`Removed ${indices.length} from playlist`);
       setSelected(new Set());
       router.refresh();
@@ -484,22 +464,11 @@ export function SongsTable({
     if (ids.length === 0) return;
     setDeleting(true);
     try {
-      // Delete by id: the server resolves the real physical path from the Native
-      // API (the Subsonic path shown for playlist/search rows is tag-derived).
-      const res = await fetch("/api/delete", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      const data = await apiPost<{ moved: number; failed: number; results: Array<{ id?: string; ok?: boolean }> }>("/api/delete", { ids });
       const failedNote = data.failed ? `, ${data.failed} failed` : "";
       toast.success(`Moved ${data.moved} to trash${failedNote}`);
-      // Drop only the rows the server actually moved — leave failed ones visible.
-      const okIds = new Set<string>(
-        (data.results as Array<{ id?: string; ok?: boolean }> | undefined)
-          ?.filter((r) => r.ok && r.id)
-          .map((r) => r.id as string) ?? [],
+      const okIds = new Set(
+        (data.results ?? []).filter((r) => r.ok && r.id).map((r) => r.id as string),
       );
       setSongs((prev) => prev.filter((s) => !okIds.has(s.id)));
       setSelected(new Set());

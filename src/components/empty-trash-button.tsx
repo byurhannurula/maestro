@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { apiJson } from "@/hooks/use-api";
 import { formatBytes } from "@/lib/format";
 
 export function EmptyTrashButton({ files, bytes }: { files: number; bytes: number }) {
@@ -25,9 +26,7 @@ export function EmptyTrashButton({ files, bytes }: { files: number; bytes: numbe
   async function empty() {
     setBusy(true);
     try {
-      const res = await fetch("/api/trash", { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      const data = await apiJson<{ bytes: number; files: number }>("/api/trash", { method: "DELETE" });
       toast.success(`Emptied trash — freed ${formatBytes(data.bytes)} (${data.files} files)`);
       setOpen(false);
       router.refresh();

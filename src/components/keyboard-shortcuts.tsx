@@ -10,6 +10,7 @@ import {
   useShortcutList,
   type ShortcutSpec,
 } from "@/components/shortcuts";
+import { apiPost } from "@/hooks/use-api";
 
 /** Order groups appear in the help sheet. */
 const GROUP_ORDER = ["Navigation", "View", "Actions", "Help"];
@@ -26,7 +27,7 @@ export function KeyboardShortcuts() {
 
   const reload = useCallback(async () => {
     try {
-      await fetch("/api/reload", { method: "POST" });
+      await apiPost("/api/reload");
     } catch {
       /* refresh anyway */
     }
