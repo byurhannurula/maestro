@@ -29,6 +29,11 @@ describe("mbidFrom", () => {
   it("returns empty string when no MBID pattern found", () => {
     expect(mbidFrom("just a regular url")).toBe("");
   });
+
+  it("returns empty string for non-string objects (not called as a string)", () => {
+    const obj = { toString: () => "https://musicbrainz.org/playlist/eee-eee" };
+    expect(mbidFrom(obj)).toBe("");
+  });
 });
 
 describe("cleanKind", () => {
@@ -44,6 +49,14 @@ describe("cleanKind", () => {
 
   it("keeps the title when there is no 'for' suffix", () => {
     expect(cleanKind(DAILY_JAMS)).toBe(DAILY_JAMS);
+  });
+
+  it("strips 'for' suffix even without a trailing date", () => {
+    expect(cleanKind("A for B")).toBe("A");
+  });
+
+  it("strips different locale formats", () => {
+    expect(cleanKind("Weekly Jams for user, week of 2026-07-20")).toBe("Weekly Jams");
   });
 });
 
