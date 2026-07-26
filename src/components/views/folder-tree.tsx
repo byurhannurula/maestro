@@ -76,10 +76,10 @@ export function FolderTreeNode(props: TreeNodeProps) {
         onDragLeave={() => setDragOver(false)}
         onDrop={mode === "music" ? handleDrop : undefined}
         className={cn(
-          "group flex items-center gap-1 rounded-md py-1 pr-2 text-sm transition-colors",
+          "group flex items-center gap-1 py-1 pr-2 text-sm transition-colors",
           isActive
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+            : "rounded-md text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
           dragOver && "ring-2 ring-primary ring-inset",
         )}
         style={{ paddingLeft: `${depth + 0.5}rem` }}

@@ -108,10 +108,10 @@ export function FolderView({ now }: { now: number }) {
           <button
             onClick={() => navigate("")}
             className={cn(
-              "flex w-full items-center gap-1.5 rounded-md px-3 py-1 text-sm transition-colors",
+              "flex w-full items-center gap-1.5 px-3 py-1 text-sm transition-colors",
               path === ""
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-muted-foreground hover:bg-sidebar-accent/60",
+                : "rounded-md text-muted-foreground hover:bg-sidebar-accent/60",
             )}
           >
             <Home className="size-3.5" />
