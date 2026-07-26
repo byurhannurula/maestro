@@ -1,6 +1,7 @@
 import "server-only";
 import { isNavidromeConfigured } from "@/lib/env";
 import { trackKey, normArtist } from "@/lib/navidrome/dedupe";
+import { buildIndexedPaths } from "@/lib/navidrome/indexed-paths";
 import { getSongs } from "@/lib/navidrome/native";
 import { applyStaleCutoff, processInMemory } from "@/lib/navidrome/query";
 import { search3Songs, getPlaylistSongs } from "@/lib/navidrome/subsonic";
@@ -115,5 +116,19 @@ export async function getLibraryArtistKeys(): Promise<Set<string>> {
   return cached("library-artists", ["songs"], async () => {
     const all = await fetchAllSongs();
     return new Set(all.map((s) => normArtist(s.artist)).filter(Boolean));
+  });
+}
+
+/**
+ * A Set of physical file paths known to Navidrome's tag index. Used by the
+ * Music Folder Browser (PRD §6.6) "indexed by Navidrome?" flag. Reuses the
+ * cached flat fetch (`fetchAllSongs` under tag "songs") — busted on every
+ * mutation, so the flag is fresh after a delete + rescan.
+ */
+export async function getIndexedPaths(): Promise<Set<string>> {
+  if (!isNavidromeConfigured) return new Set();
+  return cached("library-paths", ["songs"], async () => {
+    const all = await fetchAllSongs();
+    return buildIndexedPaths(all);
   });
 }

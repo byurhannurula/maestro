@@ -2,6 +2,7 @@ export {
   getLibrarySongs,
   getLibraryKeys,
   getLibraryArtistKeys,
+  getIndexedPaths,
 } from "@/lib/navidrome/library/songs";
 
 export {

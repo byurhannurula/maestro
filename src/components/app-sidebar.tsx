@@ -3,6 +3,7 @@
 import {
   ChevronsUpDown,
   Download,
+  FolderOpen,
   ListMusic,
   ListVideo,
   Loader2,
@@ -43,6 +44,7 @@ const NAV = [
   { href: "/playlists", label: "Playlists", icon: ListVideo, exact: false },
   { href: "/discovery", label: "Discovery", icon: Sparkles, exact: false },
   { href: "/cleanup", label: "Cleanup", icon: Trash2, exact: false },
+  { href: "/folders", label: "Folders", icon: FolderOpen, exact: false },
   { href: "/import", label: "Import", icon: Download, exact: false },
 ] as const;
 

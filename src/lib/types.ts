@@ -135,3 +135,25 @@ export interface DiscoveryArtist {
   /** Already have tracks by this artist. */
   inLibrary: boolean;
 }
+
+/** A single entry in the Music Folder Browser (PRD §6.6) — file or directory. */
+export interface FolderEntry {
+  name: string;
+  /** Library-relative path (forward slashes, safeRelPath-validated). */
+  rel: string;
+  isDir: boolean;
+  sizeBytes?: number;
+  /** ISO mtime, when known. */
+  modifiedAt?: string;
+  /** True when the path is in Navidrome's tag index (files only). */
+  indexed?: boolean;
+}
+
+/** Result of listing a directory under MUSIC_DIR. */
+export interface FolderListing {
+  /** The library-relative path that was listed ("" = root). */
+  path: string;
+  /** Parent path, or null at root. */
+  parent: string | null;
+  entries: FolderEntry[];
+}
